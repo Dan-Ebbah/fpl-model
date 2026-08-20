@@ -1,0 +1,171 @@
+{
+ "sheet": "PREDICT",
+ "header_row": 2,
+ "data_row": 3,
+ "columns": {
+  "A": {
+   "header": "HELP CODE",
+   "formula": "=MODEL[[#This Row],[Code]]"
+  },
+  "B": {
+   "header": "HARD CODE",
+   "formula": "141746"
+  },
+  "C": {
+   "header": "Player Name",
+   "formula": "=INDEX(MODEL[FPL_Name],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "D": {
+   "header": "IF START PTS",
+   "formula": "=SUMIFS(PPts[IF START TOTAL],PPts[Code],PREDICT[[#This Row],[HARD CODE]],PPts[GW], \">=\"&$BB$2,PPts[GW], \"<=\"&$BC$2)"
+  },
+  "E": {
+   "header": "TRUE PTS",
+   "formula": "=SUMIFS(PPts[TRUE TOTAL],PPts[Code],PREDICT[[#This Row],[HARD CODE]],PPts[GW], \">=\"&$BB$2,PPts[GW], \"<=\"&$BC$2)"
+  },
+  "F": {
+   "header": "Start %",
+   "formula": "=INDEX(PPts!$BH$2:$BH$1000,MATCH(PREDICT[[#This Row],[HARD CODE]],PPts!$E$2:$E$1000,0))"
+  },
+  "G": {
+   "header": "\u2691",
+   "formula": "=IF(INDEX(MODEL[Chance of Playing],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))*100=100,\"\",INDEX(MODEL[Chance of Playing],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))*100)"
+  },
+  "H": {
+   "header": "Manual Start %",
+   "formula": null
+  },
+  "I": {
+   "header": "M/S",
+   "formula": "=INDEX(MODEL[G+A PSxTS Mn/Start],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))*90"
+  },
+  "J": {
+   "header": "Fix",
+   "formula": "=SUMIFS(PPts[1-60 mins],PPts[Code],PREDICT[[#This Row],[HARD CODE]],PPts[GW], \">=\"&$BB$2,PPts[GW], \"<=\"&$BC$2)"
+  },
+  "K": {
+   "header": "POS",
+   "formula": "=INDEX(MODEL[POS],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "L": {
+   "header": "TEAM",
+   "formula": "=INDEX(MODEL[TEAM],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "M": {
+   "header": "\u00a3",
+   "formula": "=IFERROR(INDEX(API[now_cost],MATCH(PREDICT[[#This Row],[HARD CODE]],API[code],0))/10,0)"
+  },
+  "N": {
+   "header": "VALUE",
+   "formula": "=IFERROR((PREDICT[[#This Row],[TRUE PTS]]/PREDICT[[#This Row],[\u00a3]])/PREDICT[[#This Row],[Fix]],0)"
+  },
+  "O": {
+   "header": "%",
+   "formula": "=IFERROR(INDEX(API[selected_by_percent],MATCH(PREDICT[[#This Row],[HARD CODE]],API[code],0)),0)"
+  },
+  "P": {
+   "header": "P",
+   "formula": "=IFERROR(INDEX(PSAPI[total_points],MATCH(PREDICT[[#This Row],[HARD CODE]],PSAPI[code],0)),0)"
+  },
+  "Q": {
+   "header": "DC",
+   "formula": "=INDEX(MODEL[11],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))/2"
+  },
+  "R": {
+   "header": "BP",
+   "formula": "=INDEX(MODEL[6],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "S": {
+   "header": "YC",
+   "formula": "=ABS(INDEX(MODEL[4],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0)))"
+  },
+  "T": {
+   "header": "G",
+   "formula": "=IFERROR(INDEX(PSAPI[goals_scored],MATCH(PREDICT[[#This Row],[HARD CODE]],PSAPI[code],0)),0)"
+  },
+  "U": {
+   "header": "A",
+   "formula": "=IFERROR(INDEX(PSAPI[assists],MATCH(PREDICT[[#This Row],[HARD CODE]],PSAPI[code],0)),0)"
+  },
+  "V": {
+   "header": "LF xGI/St",
+   "formula": "=PREDICT[[#This Row],[LF xG/St]]+PREDICT[[#This Row],[LF xA/St]]"
+  },
+  "W": {
+   "header": "LF xG/St",
+   "formula": "=INDEX(MODEL[LF xG/St],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "X": {
+   "header": "LF xA/St",
+   "formula": "=INDEX(MODEL[LF xA/St],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "Y": {
+   "header": "SF xGI/St",
+   "formula": "=PREDICT[[#This Row],[SF xG/St]]+PREDICT[[#This Row],[SF xA/St]]"
+  },
+  "Z": {
+   "header": "SF xG/St",
+   "formula": "=INDEX(MODEL[SF xG/St],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "AA": {
+   "header": "SF xA/St",
+   "formula": "=INDEX(MODEL[SF xA/St],MATCH(PREDICT[[#This Row],[HARD CODE]],MODEL[Code],0))"
+  },
+  "AB": {
+   "header": "Team xG",
+   "formula": "=IFERROR(INDEX(TABLES[LFxSF US xG Fix],MATCH(PREDICT[[#This Row],[TEAM]],TABLES[ABVR],0)),1.5)"
+  },
+  "AC": {
+   "header": "Team xGC",
+   "formula": "=IFERROR(INDEX(TABLES[LFxSF US xGC FIX],MATCH(PREDICT[[#This Row],[TEAM]],TABLES[ABVR],0)),1.5)"
+  },
+  "AD": {
+   "header": "1",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AD$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AE": {
+   "header": "2",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AE$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AF": {
+   "header": "3",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AF$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AG": {
+   "header": "4",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AG$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AH": {
+   "header": "5",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AH$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AI": {
+   "header": "6",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AI$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AJ": {
+   "header": "7",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AJ$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AK": {
+   "header": "8",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AK$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AL": {
+   "header": "9",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AL$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "AM": {
+   "header": "10",
+   "formula": "=INDEX(TICKER[[GW1]:[GW38]],MATCH($L3,FIXTURES!$BA$2:$BA$21,0),MATCH(\"GW\"&PREDICT!AM$1,TICKER[[#Headers],[GW1]:[GW38]],0))"
+  },
+  "BB": {
+   "header": "1",
+   "formula": null
+  },
+  "BC": {
+   "header": "10",
+   "formula": null
+  }
+ }
+}

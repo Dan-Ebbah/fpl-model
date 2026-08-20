@@ -1,0 +1,63 @@
+{
+ "sheet": "PSTABLE",
+ "header_row": 1,
+ "data_row": 2,
+ "columns": {
+  "A": {
+   "header": "number",
+   "formula": "1"
+  },
+  "B": {
+   "header": "team",
+   "formula": "Arsenal"
+  },
+  "C": {
+   "header": "matches",
+   "formula": "38"
+  },
+  "D": {
+   "header": "wins",
+   "formula": "26"
+  },
+  "E": {
+   "header": "draws",
+   "formula": "7"
+  },
+  "F": {
+   "header": "loses",
+   "formula": "5"
+  },
+  "G": {
+   "header": "goals",
+   "formula": "71"
+  },
+  "H": {
+   "header": "ga",
+   "formula": "27"
+  },
+  "I": {
+   "header": "points",
+   "formula": "85"
+  },
+  "J": {
+   "header": "xG",
+   "formula": "77.49"
+  },
+  "K": {
+   "header": "xGA",
+   "formula": "33.13"
+  },
+  "L": {
+   "header": "xPTS",
+   "formula": "79.87"
+  },
+  "N": {
+   "header": "xG/90",
+   "formula": "=IFERROR(J2/C2,0)"
+  },
+  "O": {
+   "header": "xGC/90",
+   "formula": "=IFERROR(K2/C2,0)"
+  }
+ }
+}

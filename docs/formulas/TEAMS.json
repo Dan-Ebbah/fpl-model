@@ -1,0 +1,95 @@
+{
+ "sheet": "TEAMS",
+ "header_row": 1,
+ "data_row": 2,
+ "columns": {
+  "A": {
+   "header": "code",
+   "formula": "3"
+  },
+  "B": {
+   "header": "draw",
+   "formula": "0"
+  },
+  "C": {
+   "header": "form",
+   "formula": null
+  },
+  "D": {
+   "header": "id",
+   "formula": "1"
+  },
+  "E": {
+   "header": "loss",
+   "formula": "0"
+  },
+  "F": {
+   "header": "name",
+   "formula": "Arsenal"
+  },
+  "G": {
+   "header": "played",
+   "formula": "0"
+  },
+  "H": {
+   "header": "points",
+   "formula": "0"
+  },
+  "I": {
+   "header": "position",
+   "formula": "0"
+  },
+  "J": {
+   "header": "short_name",
+   "formula": "ARS"
+  },
+  "K": {
+   "header": "strength",
+   "formula": null
+  },
+  "L": {
+   "header": "team_division",
+   "formula": null
+  },
+  "M": {
+   "header": "unavailable",
+   "formula": "False"
+  },
+  "N": {
+   "header": "win",
+   "formula": "0"
+  },
+  "O": {
+   "header": "link_url",
+   "formula": null
+  },
+  "P": {
+   "header": "strength_overall_home",
+   "formula": "4"
+  },
+  "Q": {
+   "header": "strength_overall_away",
+   "formula": "5"
+  },
+  "R": {
+   "header": "strength_attack_home",
+   "formula": "0"
+  },
+  "S": {
+   "header": "strength_attack_away",
+   "formula": "0"
+  },
+  "T": {
+   "header": "strength_defence_home",
+   "formula": "0"
+  },
+  "U": {
+   "header": "strength_defence_away",
+   "formula": "0"
+  },
+  "V": {
+   "header": "pulse_id",
+   "formula": "1"
+  }
+ }
+}

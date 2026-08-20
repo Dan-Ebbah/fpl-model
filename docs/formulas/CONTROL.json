@@ -1,0 +1,922 @@
+[
+ {
+  "cell": "D1",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "E1",
+  "value": "COLUMN MATCH"
+ },
+ {
+  "cell": "H1",
+  "value": "NOTES"
+ },
+ {
+  "cell": "A2",
+  "value": "CURRENT SEASON (Format YYYY-YY)"
+ },
+ {
+  "cell": "B2",
+  "value": "2026-27"
+ },
+ {
+  "cell": "C2",
+  "value": "=RIGHT(B2,5)"
+ },
+ {
+  "cell": "D2",
+  "value": "=(LEFT(C2,2)*1)-1&\"-\"&(RIGHT(C2,2)*1)-1"
+ },
+ {
+  "cell": "E2",
+  "value": "=MATCH(CONTROL!$C$2&\"-GW\"&CONTROL!$C$3,MINS!$B$1001:$CZ$1001,0)"
+ },
+ {
+  "cell": "A3",
+  "value": "LAST GW (Pre-Season = 0)"
+ },
+ {
+  "cell": "B3",
+  "value": "0"
+ },
+ {
+  "cell": "C3",
+  "value": "=IF(LEN(B3)=1,\"0\"&B3,B3)"
+ },
+ {
+  "cell": "A6",
+  "value": "1-60 mins"
+ },
+ {
+  "cell": "A8",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "B8",
+  "value": "1"
+ },
+ {
+  "cell": "A9",
+  "value": "This Season"
+ },
+ {
+  "cell": "B9",
+  "value": "=1-B8"
+ },
+ {
+  "cell": "A12",
+  "value": "60+ mins"
+ },
+ {
+  "cell": "B12",
+  "value": "mn/st"
+ },
+ {
+  "cell": "C12",
+  "value": "% -60"
+ },
+ {
+  "cell": "B13",
+  "value": "90"
+ },
+ {
+  "cell": "C13",
+  "value": "0"
+ },
+ {
+  "cell": "B14",
+  "value": "80"
+ },
+ {
+  "cell": "C14",
+  "value": "0.05"
+ },
+ {
+  "cell": "B15",
+  "value": "70"
+ },
+ {
+  "cell": "C15",
+  "value": "0.15"
+ },
+ {
+  "cell": "B16",
+  "value": "60"
+ },
+ {
+  "cell": "C16",
+  "value": "0.5"
+ },
+ {
+  "cell": "B17",
+  "value": "50"
+ },
+ {
+  "cell": "C17",
+  "value": "0.5"
+ },
+ {
+  "cell": "A19",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "B19",
+  "value": "1"
+ },
+ {
+  "cell": "A20",
+  "value": "This Season"
+ },
+ {
+  "cell": "B20",
+  "value": "=1-B19"
+ },
+ {
+  "cell": "A23",
+  "value": "3x Saves"
+ },
+ {
+  "cell": "A25",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "B25",
+  "value": "1"
+ },
+ {
+  "cell": "A26",
+  "value": "This Season"
+ },
+ {
+  "cell": "B26",
+  "value": "=1-B25"
+ },
+ {
+  "cell": "A29",
+  "value": "Yellow Cards"
+ },
+ {
+  "cell": "A31",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "B31",
+  "value": "1"
+ },
+ {
+  "cell": "A32",
+  "value": "This Season"
+ },
+ {
+  "cell": "B32",
+  "value": "=1-B31"
+ },
+ {
+  "cell": "A35",
+  "value": "Red Cards"
+ },
+ {
+  "cell": "A37",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "B37",
+  "value": "0"
+ },
+ {
+  "cell": "A38",
+  "value": "This Season"
+ },
+ {
+  "cell": "B38",
+  "value": "0"
+ },
+ {
+  "cell": "A41",
+  "value": "Bonus Points"
+ },
+ {
+  "cell": "A43",
+  "value": "Average BPS/Start"
+ },
+ {
+  "cell": "B43",
+  "value": "14.862318964622457"
+ },
+ {
+  "cell": "A44",
+  "value": "Average Bonus/Start"
+ },
+ {
+  "cell": "B44",
+  "value": "0.29431670795024134"
+ },
+ {
+  "cell": "A45",
+  "value": "Average Bonus/BPS/Start"
+ },
+ {
+  "cell": "B45",
+  "value": "=B44/B43"
+ },
+ {
+  "cell": "H45",
+  "value": "My crude way of converting a player's BPS/Start rate to a prediction of their chance of getting bonus points is to multiply their BPS/Start rate by this number"
+ },
+ {
+  "cell": "A46",
+  "value": "Bonus or BPS Starts Filter"
+ },
+ {
+  "cell": "B46",
+  "value": "5"
+ },
+ {
+  "cell": "H46",
+  "value": "If a player has starts, less than or equal to this number, then their BPS/Start rate will be used to calculate their Bonus Point chances, rather than their Bonus/Start rate"
+ },
+ {
+  "cell": "A48",
+  "value": "Bonus"
+ },
+ {
+  "cell": "B48",
+  "value": "1"
+ },
+ {
+  "cell": "H48",
+  "value": "For all players with starts, greater than the Bonus or BPS Starts Filter, this decides how much to use their Bonus/Start rate to predict future bonus points & how much to use their BPS/Start rate"
+ },
+ {
+  "cell": "A49",
+  "value": "BPS"
+ },
+ {
+  "cell": "B49",
+  "value": "=1-B48"
+ },
+ {
+  "cell": "A51",
+  "value": "Previous Season"
+ },
+ {
+  "cell": "B51",
+  "value": "1"
+ },
+ {
+  "cell": "A52",
+  "value": "This Season"
+ },
+ {
+  "cell": "B52",
+  "value": "=1-B51"
+ },
+ {
+  "cell": "A55",
+  "value": "Goals & Assists"
+ },
+ {
+  "cell": "C55",
+  "value": "OFFSET"
+ },
+ {
+  "cell": "A56",
+  "value": "Long Form Length"
+ },
+ {
+  "cell": "B56",
+  "value": "38"
+ },
+ {
+  "cell": "C56",
+  "value": "0"
+ },
+ {
+  "cell": "D56",
+  "value": "=IF(B56-$B$3>76,B56+3,IF(B56-$B$3>38,B56+2,IF(B56-$B$3>0,B56+1,B56)))"
+ },
+ {
+  "cell": "E56",
+  "value": "=C56+(D56-B56)"
+ },
+ {
+  "cell": "A57",
+  "value": "Short Form Length"
+ },
+ {
+  "cell": "B57",
+  "value": "6"
+ },
+ {
+  "cell": "C57",
+  "value": "0"
+ },
+ {
+  "cell": "D57",
+  "value": "=IF(B57-$B$3>76,B57+3,IF(B57-$B$3>38,B57+2,IF(B57-$B$3>0,B57+1,B57)))"
+ },
+ {
+  "cell": "E57",
+  "value": "=C57+(D57-B57)"
+ },
+ {
+  "cell": "A59",
+  "value": "Long Form Weight"
+ },
+ {
+  "cell": "B59",
+  "value": "0.8"
+ },
+ {
+  "cell": "A60",
+  "value": "Short Form Weight"
+ },
+ {
+  "cell": "B60",
+  "value": "=1-B59"
+ },
+ {
+  "cell": "A62",
+  "value": "Mins/Start Previous Season"
+ },
+ {
+  "cell": "B62",
+  "value": "1"
+ },
+ {
+  "cell": "A63",
+  "value": "Mins/Start This Season"
+ },
+ {
+  "cell": "B63",
+  "value": "=1-B62"
+ },
+ {
+  "cell": "A65",
+  "value": "Fantasy Assist Boost"
+ },
+ {
+  "cell": "B65",
+  "value": "0.4"
+ },
+ {
+  "cell": "H65",
+  "value": "Over the last 3 seasons there have been about 40% more FPL assists than FPL xA"
+ },
+ {
+  "cell": "A68",
+  "value": "Clean Sheets"
+ },
+ {
+  "cell": "C68",
+  "value": "OFFSET"
+ },
+ {
+  "cell": "A69",
+  "value": "Long Form Length"
+ },
+ {
+  "cell": "B69",
+  "value": "38"
+ },
+ {
+  "cell": "C69",
+  "value": "0"
+ },
+ {
+  "cell": "D69",
+  "value": "=IF(B69-$B$3>76,B69+3,IF(B69-$B$3>38,B69+2,IF(B69-$B$3>0,B69+1,B69)))"
+ },
+ {
+  "cell": "E69",
+  "value": "=C69+(D69-B69)"
+ },
+ {
+  "cell": "A70",
+  "value": "Short Form Length"
+ },
+ {
+  "cell": "B70",
+  "value": "6"
+ },
+ {
+  "cell": "C70",
+  "value": "0"
+ },
+ {
+  "cell": "D70",
+  "value": "=IF(B70-$B$3>76,B70+3,IF(B70-$B$3>38,B70+2,IF(B70-$B$3>0,B70+1,B70)))"
+ },
+ {
+  "cell": "E70",
+  "value": "=C70+(D70-B70)"
+ },
+ {
+  "cell": "A72",
+  "value": "Long Form Weight"
+ },
+ {
+  "cell": "B72",
+  "value": "0.8"
+ },
+ {
+  "cell": "A73",
+  "value": "Short Form Weight"
+ },
+ {
+  "cell": "B73",
+  "value": "=1-B72"
+ },
+ {
+  "cell": "A76",
+  "value": "2+ Goals Conceded"
+ },
+ {
+  "cell": "A78",
+  "value": "Long Form Weight"
+ },
+ {
+  "cell": "B78",
+  "value": "0.8"
+ },
+ {
+  "cell": "A79",
+  "value": "Short Form Weight"
+ },
+ {
+  "cell": "B79",
+  "value": "=1-B78"
+ },
+ {
+  "cell": "A82",
+  "value": "Defensive Contributions"
+ },
+ {
+  "cell": "C82",
+  "value": "OFFSET"
+ },
+ {
+  "cell": "A83",
+  "value": "Long Form Length"
+ },
+ {
+  "cell": "B83",
+  "value": "38"
+ },
+ {
+  "cell": "C83",
+  "value": "=B3"
+ },
+ {
+  "cell": "D83",
+  "value": "=IF(B83-$B$3>76,B83+3,IF(B83-$B$3>38,B83+2,IF(B83-$B$3>0,B83+1,B83)))"
+ },
+ {
+  "cell": "E83",
+  "value": "=C83+(D83-B83)"
+ },
+ {
+  "cell": "H83",
+  "value": "To lock the long form length so that it stays set to last season's data only, make the offset cell (C83) equal the last GW cell (B3)"
+ },
+ {
+  "cell": "A84",
+  "value": "Short Form Length"
+ },
+ {
+  "cell": "B84",
+  "value": "10"
+ },
+ {
+  "cell": "C84",
+  "value": "0"
+ },
+ {
+  "cell": "D84",
+  "value": "=IF(B84-$B$3>76,B84+3,IF(B84-$B$3>38,B84+2,IF(B84-$B$3>0,B84+1,B84)))"
+ },
+ {
+  "cell": "E84",
+  "value": "=C84+(D84-B84)"
+ },
+ {
+  "cell": "A86",
+  "value": "Long Form Weight"
+ },
+ {
+  "cell": "B86",
+  "value": "1"
+ },
+ {
+  "cell": "A87",
+  "value": "Short Form Weight"
+ },
+ {
+  "cell": "B87",
+  "value": "=1-B86"
+ },
+ {
+  "cell": "A89",
+  "value": "Mins/Start Previous Season"
+ },
+ {
+  "cell": "B89",
+  "value": "1"
+ },
+ {
+  "cell": "A90",
+  "value": "Mins/Start This Season"
+ },
+ {
+  "cell": "B90",
+  "value": "=1-B89"
+ },
+ {
+  "cell": "A93",
+  "value": "FDR"
+ },
+ {
+  "cell": "C93",
+  "value": "OFFSET"
+ },
+ {
+  "cell": "A94",
+  "value": "Long Form Length"
+ },
+ {
+  "cell": "B94",
+  "value": "38"
+ },
+ {
+  "cell": "C94",
+  "value": "0"
+ },
+ {
+  "cell": "D94",
+  "value": "=IF(B94-$B$3>76,B94+3,IF(B94-$B$3>38,B94+2,IF(B94-$B$3>0,B94+1,B94)))"
+ },
+ {
+  "cell": "E94",
+  "value": "=C94+(D94-B94)"
+ },
+ {
+  "cell": "A95",
+  "value": "Short Form Length"
+ },
+ {
+  "cell": "B95",
+  "value": "6"
+ },
+ {
+  "cell": "C95",
+  "value": "0"
+ },
+ {
+  "cell": "D95",
+  "value": "=IF(B95-$B$3>76,B95+3,IF(B95-$B$3>38,B95+2,IF(B95-$B$3>0,B95+1,B95)))"
+ },
+ {
+  "cell": "E95",
+  "value": "=C95+(D95-B95)"
+ },
+ {
+  "cell": "A97",
+  "value": "Long Form Weight"
+ },
+ {
+  "cell": "B97",
+  "value": "0.8"
+ },
+ {
+  "cell": "A98",
+  "value": "Short Form Weight"
+ },
+ {
+  "cell": "B98",
+  "value": "=1-B97"
+ },
+ {
+  "cell": "A100",
+  "value": "Understat Correction"
+ },
+ {
+  "cell": "B100",
+  "value": "xG/xGC"
+ },
+ {
+  "cell": "B101",
+  "value": "2"
+ },
+ {
+  "cell": "C101",
+  "value": "1"
+ },
+ {
+  "cell": "H101",
+  "value": "Understat's xG model overestimates poor teams attacks and underestimates good teams defences. To turn off just set both to 100%"
+ },
+ {
+  "cell": "B102",
+  "value": "0.9"
+ },
+ {
+  "cell": "C102",
+  "value": "0.9"
+ },
+ {
+  "cell": "A104",
+  "value": "PPts FDR multiplier"
+ },
+ {
+  "cell": "B104",
+  "value": "xG/xGC"
+ },
+ {
+  "cell": "B105",
+  "value": "2.25"
+ },
+ {
+  "cell": "C105",
+  "value": "1.6"
+ },
+ {
+  "cell": "H105",
+  "value": "Not Using anymore?"
+ },
+ {
+  "cell": "B106",
+  "value": "=TABLES!$AG$2"
+ },
+ {
+  "cell": "C106",
+  "value": "1"
+ },
+ {
+  "cell": "H106",
+  "value": "Not Using anymore?"
+ },
+ {
+  "cell": "A107",
+  "value": "Safe Threshold"
+ },
+ {
+  "cell": "B107",
+  "value": "1.55"
+ },
+ {
+  "cell": "H107",
+  "value": "Not Using anymore?"
+ },
+ {
+  "cell": "A108",
+  "value": "Dampening Factor"
+ },
+ {
+  "cell": "B108",
+  "value": "0.4"
+ },
+ {
+  "cell": "H108",
+  "value": "Not Using anymore?"
+ },
+ {
+  "cell": "A110",
+  "value": "League Average xG/xGC Previous Season"
+ },
+ {
+  "cell": "B110",
+  "value": "1"
+ },
+ {
+  "cell": "A111",
+  "value": "League Average xG/xGC This Season"
+ },
+ {
+  "cell": "B111",
+  "value": "=1-B110"
+ },
+ {
+  "cell": "D114",
+  "value": "MULTIPLIER"
+ },
+ {
+  "cell": "E114",
+  "value": "0.6651"
+ },
+ {
+  "cell": "F114",
+  "value": "1.4648"
+ },
+ {
+  "cell": "H114",
+  "value": "Source: https://databetweenthelines.substack.com/p/the-promotion-effect"
+ },
+ {
+  "cell": "A115",
+  "value": "Promoted Teams Manual FDR"
+ },
+ {
+  "cell": "B115",
+  "value": "ABRV"
+ },
+ {
+  "cell": "C115",
+  "value": "=\"THEIR \"&D2&\" xG/90\""
+ },
+ {
+  "cell": "D115",
+  "value": "=\"THEIR \"&D2&\" xGC/90\""
+ },
+ {
+  "cell": "E115",
+  "value": "PREDICTED xG/90"
+ },
+ {
+  "cell": "F115",
+  "value": "PREDICTED xGC/90"
+ },
+ {
+  "cell": "A116",
+  "value": "Coventry"
+ },
+ {
+  "cell": "B116",
+  "value": "COV"
+ },
+ {
+  "cell": "C116",
+  "value": "1.9"
+ },
+ {
+  "cell": "D116",
+  "value": "1.09"
+ },
+ {
+  "cell": "E116",
+  "value": "=C116*$E$114"
+ },
+ {
+  "cell": "F116",
+  "value": "=D116*$F$114"
+ },
+ {
+  "cell": "A117",
+  "value": "Ipswich"
+ },
+ {
+  "cell": "B117",
+  "value": "IPS"
+ },
+ {
+  "cell": "C117",
+  "value": "1.72"
+ },
+ {
+  "cell": "D117",
+  "value": "1.01"
+ },
+ {
+  "cell": "E117",
+  "value": "=C117*$E$114"
+ },
+ {
+  "cell": "F117",
+  "value": "=D117*$F$114"
+ },
+ {
+  "cell": "A118",
+  "value": "Hull"
+ },
+ {
+  "cell": "B118",
+  "value": "HUL"
+ },
+ {
+  "cell": "C118",
+  "value": "1.3"
+ },
+ {
+  "cell": "D118",
+  "value": "1.74"
+ },
+ {
+  "cell": "E118",
+  "value": "=C118*$E$114"
+ },
+ {
+  "cell": "F118",
+  "value": "=D118*$F$114"
+ },
+ {
+  "cell": "A121",
+  "value": "Defensive Contributions"
+ },
+ {
+  "cell": "C121",
+  "value": "OFFSET"
+ },
+ {
+  "cell": "A122",
+  "value": "Long Form Length"
+ },
+ {
+  "cell": "B122",
+  "value": "38"
+ },
+ {
+  "cell": "C122",
+  "value": "=B36"
+ },
+ {
+  "cell": "D122",
+  "value": "=IF(B122-$B$3>76,B122+3,IF(B122-$B$3>38,B122+2,IF(B122-$B$3>0,B122+1,B122)))"
+ },
+ {
+  "cell": "E122",
+  "value": "=C122+(D122-B122)"
+ },
+ {
+  "cell": "A123",
+  "value": "Short Form Length"
+ },
+ {
+  "cell": "B123",
+  "value": "10"
+ },
+ {
+  "cell": "C123",
+  "value": "0"
+ },
+ {
+  "cell": "D123",
+  "value": "=IF(B123-$B$3>76,B123+3,IF(B123-$B$3>38,B123+2,IF(B123-$B$3>0,B123+1,B123)))"
+ },
+ {
+  "cell": "E123",
+  "value": "=C123+(D123-B123)"
+ },
+ {
+  "cell": "A124",
+  "value": "Mins Filter"
+ },
+ {
+  "cell": "B124",
+  "value": "40"
+ },
+ {
+  "cell": "H124",
+  "value": "Informs the team strength scores. i.e. if a player gets 5 DC's in 45 mins his per 90 will be 10. ~40 mins seems enough to get a fair sense of DC rate, whilst cutting off any skewing of the data from short sub appearances. "
+ },
+ {
+  "cell": "A126",
+  "value": "Long Form Weight"
+ },
+ {
+  "cell": "B126",
+  "value": "0.8"
+ },
+ {
+  "cell": "A127",
+  "value": "Short Form Weight"
+ },
+ {
+  "cell": "B127",
+  "value": "=1-B126"
+ },
+ {
+  "cell": "A129",
+  "value": "Promoted Teams Manual DC/90"
+ },
+ {
+  "cell": "B129",
+  "value": "ABRV"
+ },
+ {
+  "cell": "C129",
+  "value": "VS CB"
+ },
+ {
+  "cell": "D129",
+  "value": "VS DM"
+ },
+ {
+  "cell": "A130",
+  "value": "Coventry"
+ },
+ {
+  "cell": "B130",
+  "value": "COV"
+ },
+ {
+  "cell": "C130",
+  "value": "8.04"
+ },
+ {
+  "cell": "D130",
+  "value": "10.72"
+ },
+ {
+  "cell": "H130",
+  "value": "West Ham's 25/26 rates"
+ }
+]

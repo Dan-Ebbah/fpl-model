@@ -1,0 +1,767 @@
+{
+ "sheet": "MODEL",
+ "header_row": 1,
+ "data_row": 2,
+ "columns": {
+  "A": {
+   "header": "Code",
+   "formula": "=API!$E2"
+  },
+  "B": {
+   "header": "FPL_Name",
+   "formula": "=IFERROR(INDEX(API[first_name],MATCH(MODEL[[#This Row],[Code]],API[code],0))&\" \"&INDEX(API[second_name],MATCH(MODEL[[#This Row],[Code]],API[code],0)),\"-\")"
+  },
+  "C": {
+   "header": "web_name",
+   "formula": "=IFERROR(INDEX(API[web_name],MATCH(MODEL[[#This Row],[Code]],API[code],0)),\"-\")"
+  },
+  "D": {
+   "header": "FBRef_Name",
+   "formula": "David Raya"
+  },
+  "E": {
+   "header": "Alt Name 2",
+   "formula": "-"
+  },
+  "F": {
+   "header": "POS",
+   "formula": "=IFERROR(INDEX(element_type[],MATCH(INDEX(API[],MATCH(MODEL[[#This Row],[Code]],API[code],0),MATCH(\"element_type\",API[#Headers],0)),element_type[element_type],0),MATCH(\"POS\",element_type[#Headers],0)),\"-\")"
+  },
+  "G": {
+   "header": "POS2",
+   "formula": "GK"
+  },
+  "H": {
+   "header": "TEAM",
+   "formula": "=IFERROR(INDEX(TEAMS[short_name],MATCH(INDEX(API[team],MATCH(MODEL[[#This Row],[Code]],API[code],0)),TEAMS[id],0)),\"-\")"
+  },
+  "I": {
+   "header": "Full Team",
+   "formula": "=IFERROR(INDEX(TEAMS[name],MATCH(INDEX(API[team],MATCH(MODEL[[#This Row],[Code]],API[code],0)),TEAMS[id],0)),\"-\")"
+  },
+  "J": {
+   "header": "PS Starts",
+   "formula": "=MODEL[[#This Row],[Previous Season Starts1]]"
+  },
+  "K": {
+   "header": "PS Subs",
+   "formula": "=MODEL[[#This Row],[Previous Season Subs1]]"
+  },
+  "L": {
+   "header": "PS UnSub",
+   "formula": "=MODEL[[#This Row],[Previous Season UnSub1]]"
+  },
+  "M": {
+   "header": "PS Mn/St",
+   "formula": "=MODEL[[#This Row],[Previous Season Mn/Start]]"
+  },
+  "N": {
+   "header": "PS Mn/Sub",
+   "formula": "=MODEL[[#This Row],[Previous Season Mn/Sub]]"
+  },
+  "O": {
+   "header": "PS Mn/St %",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",1,IF(MODEL[[#This Row],[PS Starts]]=0,0.66,MODEL[[#This Row],[PS Mn/St]]/90))"
+  },
+  "P": {
+   "header": "PS Mn/Sub %",
+   "formula": "=IF(MODEL[[#This Row],[PS Mn/Sub]]=0,0.2,MODEL[[#This Row],[PS Mn/Sub]]/90)"
+  },
+  "Q": {
+   "header": "PS Sts/SqdsMd",
+   "formula": "=IFERROR(MODEL[[#This Row],[PS Starts]]/(MODEL[[#This Row],[PS Starts]]+MODEL[[#This Row],[PS Subs]]+MODEL[[#This Row],[PS UnSub]]),0)"
+  },
+  "R": {
+   "header": "PS UnSub/SqdsMd",
+   "formula": "=IFERROR(MODEL[[#This Row],[PS UnSub]]/(MODEL[[#This Row],[PS Starts]]+MODEL[[#This Row],[PS Subs]]+MODEL[[#This Row],[PS UnSub]]),0)"
+  },
+  "S": {
+   "header": "PS Mins",
+   "formula": "=IFERROR(INDEX(PSAPI[minutes],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "T": {
+   "header": "PS Saves",
+   "formula": "=IFERROR(INDEX(PSAPI[saves],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "U": {
+   "header": "PS Saves/90",
+   "formula": "=IFERROR((MODEL[[#This Row],[PS Saves]]/MODEL[[#This Row],[PS Mins]])*90,0)"
+  },
+  "V": {
+   "header": "PS YCs",
+   "formula": "=IFERROR(INDEX(PSAPI[yellow_cards],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "W": {
+   "header": "PS YC/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[PS YCs]]/MODEL[[#This Row],[PS Mins]])*90*MODEL[[#This Row],[PS Mn/St %]],0)"
+  },
+  "X": {
+   "header": "PS RCs",
+   "formula": "=IFERROR(INDEX(PSAPI[red_cards],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "Y": {
+   "header": "PS RC/90",
+   "formula": "=IFERROR((MODEL[[#This Row],[PS RCs]]/MODEL[[#This Row],[PS Mins]])*90,0)"
+  },
+  "Z": {
+   "header": "PS Bonus",
+   "formula": "=IFERROR(INDEX(PSAPI[bonus],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "AA": {
+   "header": "PS BPS",
+   "formula": "=IFERROR(INDEX(PSAPI[bps],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "AB": {
+   "header": "PS Start BPS",
+   "formula": "=IFERROR(MODEL[[#This Row],[PS BPS]]*((MODEL[[#This Row],[PS Starts]]*MODEL[[#This Row],[PS Mn/St]])/MODEL[[#This Row],[PS Mins]]),0)"
+  },
+  "AC": {
+   "header": "PS BPS/Start",
+   "formula": "=IFERROR(IF(MODEL[[#This Row],[PS Start BPS]]/MODEL[[#This Row],[PS Starts]]=0,CONTROL!$B$43,MODEL[[#This Row],[PS Start BPS]]/MODEL[[#This Row],[PS Starts]]),CONTROL!$B$43)"
+  },
+  "AD": {
+   "header": "PS Bonus/Start",
+   "formula": "=IFERROR(IF(MODEL[[#This Row],[PS Bonus]]/MODEL[[#This Row],[PS Starts]]=0,CONTROL!$B$44,MODEL[[#This Row],[PS Bonus]]/MODEL[[#This Row],[PS Starts]]),CONTROL!$B$44)"
+  },
+  "AE": {
+   "header": "PS A",
+   "formula": "=IFERROR(INDEX(PSAPI[assists],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "AF": {
+   "header": "PS A/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[PS A]]/MODEL[[#This Row],[PS Mins]])*90*MODEL[[#This Row],[PS Mn/St %]],0)"
+  },
+  "AG": {
+   "header": "PS xA",
+   "formula": "=IFERROR(INDEX(PSAPI[expected_assists],MATCH(MODEL[[#This Row],[Code]],PSAPI[code],0)),0)"
+  },
+  "AH": {
+   "header": "PS xA/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[PS xA]]/MODEL[[#This Row],[PS Mins]])*90*MODEL[[#This Row],[PS Mn/St %]],0)"
+  },
+  "AI": {
+   "header": "PS DC Hits",
+   "formula": "0"
+  },
+  "AJ": {
+   "header": "PS DC Hits/Starts",
+   "formula": "=IFERROR(MODEL[[#This Row],[PS DC Hits]]/MODEL[[#This Row],[PS Starts]],0)"
+  },
+  "AK": {
+   "header": "G+A PSxTS Mn/Start",
+   "formula": "=(MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])"
+  },
+  "AL": {
+   "header": "G+A PSxTS Mn/Sub",
+   "formula": "=(MODEL[[#This Row],[PS Mn/Sub %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/Sub %]])"
+  },
+  "AM": {
+   "header": "Chance of Playing",
+   "formula": "=IFERROR(IF(INDEX(API[chance_of_playing_next_round],MATCH(API[[#This Row],[code]],API[code],0))=\"\",1,(INDEX(API[chance_of_playing_next_round],MATCH(API[[#This Row],[code]],API[code],0)))/100),0)"
+  },
+  "AN": {
+   "header": "Starts",
+   "formula": "=MODEL[[#This Row],[Starts1]]"
+  },
+  "AO": {
+   "header": "Subs",
+   "formula": "=MODEL[[#This Row],[Subs1]]"
+  },
+  "AP": {
+   "header": "UnSub",
+   "formula": "=MODEL[[#This Row],[UnSub1]]"
+  },
+  "AQ": {
+   "header": "Mn/St",
+   "formula": "=MODEL[[#This Row],[Mn/Start1]]"
+  },
+  "AR": {
+   "header": "Mn/Sub",
+   "formula": "=MODEL[[#This Row],[Mn/Sub1]]"
+  },
+  "AS": {
+   "header": "Mn/St %",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",1,IF(MODEL[[#This Row],[Starts]]=0,0.66,MODEL[[#This Row],[Mn/St]]/90))"
+  },
+  "AT": {
+   "header": "Mn/Sub %",
+   "formula": "=IF(MODEL[[#This Row],[Mn/Sub]]=0,0.2,MODEL[[#This Row],[Mn/Sub]]/90)"
+  },
+  "AU": {
+   "header": "St/SqdsMd",
+   "formula": "=IFERROR(MODEL[[#This Row],[Starts]]/(MODEL[[#This Row],[Starts]]+MODEL[[#This Row],[Subs]]+MODEL[[#This Row],[UnSub]]),0)"
+  },
+  "AV": {
+   "header": "UnSub/SqdsMd",
+   "formula": "=IFERROR(MODEL[[#This Row],[UnSub]]/(MODEL[[#This Row],[Starts]]+MODEL[[#This Row],[Subs]]+MODEL[[#This Row],[UnSub]]),0)"
+  },
+  "AW": {
+   "header": "Mins",
+   "formula": "=IFERROR(INDEX(API[minutes],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "AX": {
+   "header": "Saves",
+   "formula": "=IFERROR(INDEX(API[saves],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "AY": {
+   "header": "Saves/90",
+   "formula": "=IFERROR((MODEL[[#This Row],[Saves]]/MODEL[[#This Row],[Mins]])*90,0)"
+  },
+  "AZ": {
+   "header": "YCs",
+   "formula": "=IFERROR(INDEX(API[yellow_cards],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "BA": {
+   "header": "YC/90",
+   "formula": "=IFERROR((MODEL[[#This Row],[YCs]]/MODEL[[#This Row],[Mins]])*90,0)"
+  },
+  "BB": {
+   "header": "RCs",
+   "formula": "=IFERROR(INDEX(API[red_cards],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "BC": {
+   "header": "RC/90",
+   "formula": "=IFERROR((MODEL[[#This Row],[RCs]]/MODEL[[#This Row],[Mins]])*90,0)"
+  },
+  "BD": {
+   "header": "Bonus",
+   "formula": "=IFERROR(INDEX(API[bonus],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "BE": {
+   "header": "BPS",
+   "formula": "=IFERROR(INDEX(API[bps],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "BF": {
+   "header": "Start BPS",
+   "formula": "=IFERROR(MODEL[[#This Row],[BPS]]*((MODEL[[#This Row],[Starts]]*MODEL[[#This Row],[Mn/St]])/MODEL[[#This Row],[Mins]]),0)"
+  },
+  "BG": {
+   "header": "BPS/Start",
+   "formula": "=IFERROR(MODEL[[#This Row],[Start BPS]]/MODEL[[#This Row],[Starts]],CONTROL!$B$43)"
+  },
+  "BH": {
+   "header": "Bonus/Start",
+   "formula": "=IFERROR(MODEL[[#This Row],[Bonus]]/MODEL[[#This Row],[Starts]],CONTROL!$B$44)"
+  },
+  "BI": {
+   "header": "A",
+   "formula": "=IFERROR(INDEX(API[assists],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "BJ": {
+   "header": "A/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[A]]/MODEL[[#This Row],[Mins]])*90*MODEL[[#This Row],[Mn/St %]],0)"
+  },
+  "BK": {
+   "header": "xA",
+   "formula": "=IFERROR(INDEX(API[expected_assists],MATCH(MODEL[[#This Row],[Code]],API[code],0)),0)"
+  },
+  "BL": {
+   "header": "xA/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[xA]]/MODEL[[#This Row],[Mins]])*90*MODEL[[#This Row],[Mn/St %]],0)"
+  },
+  "BM": {
+   "header": "LF G+A Mins",
+   "formula": "=IFERROR(SUM(INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$56+1-CONTROL!$C$56):INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$56)),0)"
+  },
+  "BN": {
+   "header": "LF xA",
+   "formula": "=IFERROR(SUM(INDEX(xA!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$56+1-CONTROL!$C$56):INDEX(xA!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$56)),0)"
+  },
+  "BO": {
+   "header": "LF xA/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[LF xA]]/MODEL[[#This Row],[LF G+A Mins]])*90*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])),0)"
+  },
+  "BP": {
+   "header": "LF xG",
+   "formula": "=IFERROR(SUM(INDEX(xG!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$56+1-CONTROL!$C$56):INDEX(xG!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$56)),0)"
+  },
+  "BQ": {
+   "header": "LF xG/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[LF xG]]/MODEL[[#This Row],[LF G+A Mins]])*90*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])),0)"
+  },
+  "BR": {
+   "header": "LF Pl",
+   "formula": "=IFERROR(SUM(INDEX(PL!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$56+1-CONTROL!$C$56):INDEX(PL!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$56)),0)"
+  },
+  "BS": {
+   "header": "PT CODE ROW MATCH",
+   "formula": "=MATCH(MODEL[[#This Row],[Code]],MINS!$A$1001:$A$1999,0)"
+  },
+  "BT": {
+   "header": "LF xGC",
+   "formula": "=IFERROR(SUM(INDEX(xGC!$B$1001:$CZ$1999,MATCH(MODEL[[#This Row],[TEAM]],xGC!$A$1001:$A$1999,0),CONTROL!$E$2-CONTROL!$D$69+1-CONTROL!$C$69):INDEX(xGC!$B$1001:$CZ$1999,MATCH(MODEL[[#This Row],[TEAM]],xGC!$A$1001:$A$1999,0),CONTROL!$E$2-CONTROL!$E$69)),0)"
+  },
+  "BU": {
+   "header": "LF xGC Pl",
+   "formula": "=IFERROR(SUM(INDEX(PL!$B$2200:$CZ$2290,MATCH(MODEL[[#This Row],[TEAM]],PL!$A$2200:$A$2290,0),CONTROL!$E$2-CONTROL!$D$69+1-CONTROL!$C$69):INDEX(PL!$B$2200:$CZ$2290,MATCH(MODEL[[#This Row],[TEAM]],PL!$A$2200:$A$2290,0),CONTROL!$E$2-CONTROL!$E$69)),0)"
+  },
+  "BV": {
+   "header": "LF xGC/90",
+   "formula": "=IFERROR(INDEX(TABLES[LF US xGC FIX],MATCH(MODEL[[#This Row],[TEAM]],TABLES[ABVR],0)),0)"
+  },
+  "BW": {
+   "header": "LF % CS/St",
+   "formula": "=EXP(-MODEL[[#This Row],[LF xGC/90]]*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])))*MODEL[[#This Row],[2]]"
+  },
+  "BX": {
+   "header": "LF % 2+ GC",
+   "formula": "=1-(MODEL[[#This Row],[LF % CS/St]]*(1+MODEL[[#This Row],[LF xGC/90]]))"
+  },
+  "BY": {
+   "header": "LF DCs",
+   "formula": "=IFERROR(SUM(INDEX(DC!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$83+1-CONTROL!$C$83):INDEX(DC!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$83)),0)"
+  },
+  "BZ": {
+   "header": "LF DC Mins",
+   "formula": "=IFERROR(SUM(INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$83+1-CONTROL!$C$83):INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$83)),0)"
+  },
+  "CA": {
+   "header": "LF DC/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[LF DCs]]/MODEL[[#This Row],[LF DC Mins]])*90*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$89)+(CONTROL!$B$90*MODEL[[#This Row],[Mn/St %]])),0)"
+  },
+  "CB": {
+   "header": "LF DC %",
+   "formula": "=1-_xlfn.POISSON.DIST(IF(MODEL[[#This Row],[POS]]=\"DEF\",9,11),MODEL[[#This Row],[LF DC/St]],TRUE)"
+  },
+  "CC": {
+   "header": "SF Mins",
+   "formula": "=IFERROR(SUM(INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$57+1-CONTROL!$C$57):INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$57)),0)"
+  },
+  "CD": {
+   "header": "SF xA",
+   "formula": "=IFERROR(SUM(INDEX(xA!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$57+1-CONTROL!$C$57):INDEX(xA!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$57)),0)"
+  },
+  "CE": {
+   "header": "SF xA/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[SF xA]]/MODEL[[#This Row],[SF Mins]])*90*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])),0)"
+  },
+  "CF": {
+   "header": "SF xG",
+   "formula": "=IFERROR(SUM(INDEX(xG!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$57+1-CONTROL!$C$57):INDEX(xG!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$57)),0)"
+  },
+  "CG": {
+   "header": "SF xG/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[SF xG]]/MODEL[[#This Row],[SF Mins]])*90*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])),0)"
+  },
+  "CH": {
+   "header": "SF Pl",
+   "formula": "=IFERROR(SUM(INDEX(PL!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$57+1-CONTROL!$C$57):INDEX(PL!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$57)),0)"
+  },
+  "CI": {
+   "header": "SF xGC",
+   "formula": "=IFERROR(SUM(INDEX(xGC!$B$1001:$CZ$1999,MATCH(MODEL[[#This Row],[TEAM]],xGC!$A$1001:$A$1999,0),CONTROL!$E$2-CONTROL!$D$70+1-CONTROL!$C$70):INDEX(xGC!$B$1001:$CZ$1999,MATCH(MODEL[[#This Row],[TEAM]],xGC!$A$1001:$A$1999,0),CONTROL!$E$2-CONTROL!$E$70)),0)"
+  },
+  "CJ": {
+   "header": "SF xGC Pl",
+   "formula": "=IFERROR(SUM(INDEX(PL!$B$2200:$CZ$2290,MATCH(MODEL[[#This Row],[TEAM]],PL!$A$2200:$A$2290,0),CONTROL!$E$2-CONTROL!$D$70+1-CONTROL!$C$70):INDEX(PL!$B$2200:$CZ$2290,MATCH(MODEL[[#This Row],[TEAM]],PL!$A$2200:$A$2290,0),CONTROL!$E$2-CONTROL!$E$70)),0)"
+  },
+  "CK": {
+   "header": "SF xGC/90",
+   "formula": "=IFERROR(INDEX(TABLES[SF US xGC FIX],MATCH(MODEL[[#This Row],[TEAM]],TABLES[ABVR],0)),0)"
+  },
+  "CL": {
+   "header": "SF % CS/90",
+   "formula": "=EXP(-MODEL[[#This Row],[SF xGC/90]]*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$62)+(CONTROL!$B$63*MODEL[[#This Row],[Mn/St %]])))*MODEL[[#This Row],[2]]"
+  },
+  "CM": {
+   "header": "SF % 2+ GC",
+   "formula": "=1-(MODEL[[#This Row],[SF % CS/90]]*(1+MODEL[[#This Row],[SF xGC/90]]))"
+  },
+  "CN": {
+   "header": "SF DCs",
+   "formula": "=IFERROR(SUM(INDEX(DC!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$84+1-CONTROL!$C$84):INDEX(DC!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$84)),0)"
+  },
+  "CO": {
+   "header": "SF DC Mins",
+   "formula": "=IFERROR(SUM(INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$D$84+1-CONTROL!$C$84):INDEX(MINS!$B$1001:$CZ$1999,MODEL[[#This Row],[PT CODE ROW MATCH]],CONTROL!$E$2-CONTROL!$E$84)),0)"
+  },
+  "CP": {
+   "header": "SF DC/St",
+   "formula": "=IFERROR((MODEL[[#This Row],[SF DCs]]/MODEL[[#This Row],[SF DC Mins]])*90*((MODEL[[#This Row],[PS Mn/St %]]*CONTROL!$B$89)+(CONTROL!$B$90*MODEL[[#This Row],[Mn/St %]])),0)"
+  },
+  "CQ": {
+   "header": "SF DC %",
+   "formula": "=1-_xlfn.POISSON.DIST(IF(MODEL[[#This Row],[POS]]=\"DEF\",9,11),MODEL[[#This Row],[SF DC/St]],TRUE)"
+  },
+  "CR": {
+   "header": "1-60 mins",
+   "formula": "1"
+  },
+  "CS": {
+   "header": "PS %1",
+   "formula": "=IF(AND(MODEL[[#This Row],[PS Starts]]=0,MODEL[[#This Row],[PS Subs]]=0),0.01,(1-MODEL[[#This Row],[PS UnSub/SqdsMd]])*0.99)"
+  },
+  "CT": {
+   "header": "%1",
+   "formula": "=IF(AND(MODEL[[#This Row],[Starts]]=0,MODEL[[#This Row],[Subs]]=0),0.01,(1-MODEL[[#This Row],[UnSub/SqdsMd]])*0.99)"
+  },
+  "CU": {
+   "header": "1",
+   "formula": "=IFERROR(((MODEL[[#This Row],[PS %1]]*CONTROL!$B$8)+(MODEL[[#This Row],[%1]]*CONTROL!$B$9))*MODEL[[#This Row],[1-60 mins]]*MODEL[[#This Row],[Chance of Playing]],0)"
+  },
+  "CV": {
+   "header": "60+ mins",
+   "formula": "1"
+  },
+  "CW": {
+   "header": "PS %2",
+   "formula": "=IFERROR((0.98-IF(MODEL[[#This Row],[PS Mn/St]]<50,0.5,TREND(\n  INDEX(CONTROL!$C$13:$C$17,MATCH(MODEL[[#This Row],[PS Mn/St]],CONTROL!$B$13:$B$17,-1)):INDEX(CONTROL!$C$13:$C$17,MATCH(MODEL[[#This Row],[PS Mn/St]],CONTROL!$B$13:$B$17,-1)+1),\n  INDEX(CONTROL!$B$13:$B$17,MATCH(MODEL[[#This Row],[PS Mn/St]],CONTROL!$B$13:$B$17,-1)):INDEX(CONTROL!$B$13:$B$17,MATCH(MODEL[[#This Row],[PS Mn/St]],CONTROL!$B$13:$B$17,-1)+1),\n  MODEL[[#This Row],[PS Mn/St]]\n))),0)"
+  },
+  "CX": {
+   "header": "%2",
+   "formula": "=IFERROR((0.99-IF(MODEL[[#This Row],[Mn/St]]<50,0.5,TREND(\n  INDEX(CONTROL!$C$13:$C$17,MATCH(MODEL[[#This Row],[Mn/St]],CONTROL!$B$13:$B$17,-1)):INDEX(CONTROL!$C$13:$C$17,MATCH(MODEL[[#This Row],[Mn/St]],CONTROL!$B$13:$B$17,-1)+1),\n  INDEX(CONTROL!$B$13:$B$17,MATCH(MODEL[[#This Row],[Mn/St]],CONTROL!$B$13:$B$17,-1)):INDEX(CONTROL!$B$13:$B$17,MATCH(MODEL[[#This Row],[Mn/St]],CONTROL!$B$13:$B$17,-1)+1),\n  MODEL[[#This Row],[Mn/St]]\n))),0)"
+  },
+  "CY": {
+   "header": "2",
+   "formula": "=((MODEL[[#This Row],[PS %2]]*CONTROL!$B$19)+(CONTROL!$B$20*MODEL[[#This Row],[%2]]))*MODEL[[#This Row],[60+ mins]]"
+  },
+  "CZ": {
+   "header": "3x Saves",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",1,0)"
+  },
+  "DA": {
+   "header": "PS %3",
+   "formula": "=MODEL[[#This Row],[PS Saves/90]]/3"
+  },
+  "DB": {
+   "header": "%3",
+   "formula": "=MODEL[[#This Row],[Saves/90]]/3"
+  },
+  "DC": {
+   "header": "3",
+   "formula": "=((MODEL[[#This Row],[PS %3]]*CONTROL!$B$25)+(CONTROL!$B$26*MODEL[[#This Row],[%3]]))*MODEL[[#This Row],[3x Saves]]"
+  },
+  "DD": {
+   "header": "YC",
+   "formula": "-1"
+  },
+  "DE": {
+   "header": "PS %4",
+   "formula": "=MODEL[[#This Row],[PS YC/St]]"
+  },
+  "DF": {
+   "header": "%4",
+   "formula": "=MODEL[[#This Row],[YC/90]]"
+  },
+  "DG": {
+   "header": "4",
+   "formula": "=((MODEL[[#This Row],[PS %4]]*CONTROL!$B$31)+(CONTROL!$B$32*MODEL[[#This Row],[%4]]))*MODEL[[#This Row],[YC]]"
+  },
+  "DH": {
+   "header": "RC",
+   "formula": "-3"
+  },
+  "DI": {
+   "header": "PS %5",
+   "formula": "=MODEL[[#This Row],[PS RC/90]]"
+  },
+  "DJ": {
+   "header": "%5",
+   "formula": "=MODEL[[#This Row],[RC/90]]"
+  },
+  "DK": {
+   "header": "5",
+   "formula": "=((MODEL[[#This Row],[PS %5]]*CONTROL!$B$37)+(CONTROL!$B$38*MODEL[[#This Row],[%5]]))*MODEL[[#This Row],[RC]]"
+  },
+  "DL": {
+   "header": "Bonus Pts",
+   "formula": "1"
+  },
+  "DM": {
+   "header": "PS %6",
+   "formula": "=IF(MODEL[[#This Row],[PS Starts]]>CONTROL!$B$46,(MODEL[[#This Row],[PS Bonus/Start]]*CONTROL!$B$48)+(CONTROL!$B$49*MODEL[[#This Row],[PS BPS/Start]]*CONTROL!$B$45),MODEL[[#This Row],[PS BPS/Start]]*CONTROL!$B$45)"
+  },
+  "DN": {
+   "header": "%6",
+   "formula": "=IF(MODEL[[#This Row],[Starts]]>CONTROL!$B$46,(MODEL[[#This Row],[Bonus/Start]]*CONTROL!$B$48)+(CONTROL!$B$49*MODEL[[#This Row],[BPS/Start]]*CONTROL!$B$45),MODEL[[#This Row],[BPS/Start]]*CONTROL!$B$45)"
+  },
+  "DO": {
+   "header": "6",
+   "formula": "=(MODEL[[#This Row],[PS %6]]*CONTROL!$B$51)+(CONTROL!$B$52*MODEL[[#This Row],[%6]])*MODEL[[#This Row],[Bonus Pts]]"
+  },
+  "DP": {
+   "header": "Assist",
+   "formula": "3"
+  },
+  "DQ": {
+   "header": "LF %7",
+   "formula": "=MODEL[[#This Row],[LF xA/St]]"
+  },
+  "DR": {
+   "header": "SF %7",
+   "formula": "=MODEL[[#This Row],[SF xA/St]]"
+  },
+  "DS": {
+   "header": "7",
+   "formula": "=((MODEL[[#This Row],[LF %7]]*CONTROL!$B$59)+(MODEL[[#This Row],[SF %7]]*CONTROL!$B$60))*MODEL[[#This Row],[Assist]]"
+  },
+  "DT": {
+   "header": "Goal",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",CONTROL!$C$198,IF(MODEL[[#This Row],[POS]]=\"DEF\",CONTROL!$C$199,IF(MODEL[[#This Row],[POS]]=\"MID\",CONTROL!$C$200,IF(MODEL[[#This Row],[POS]]=\"FWD\",CONTROL!$C$201,0))))"
+  },
+  "DU": {
+   "header": "LF %8",
+   "formula": "=MODEL[[#This Row],[LF xG/St]]"
+  },
+  "DV": {
+   "header": "SF %8",
+   "formula": "=MODEL[[#This Row],[SF xG/St]]"
+  },
+  "DW": {
+   "header": "8",
+   "formula": "=((MODEL[[#This Row],[LF %8]]*CONTROL!$B$59)+(MODEL[[#This Row],[SF %8]]*CONTROL!$B$60))*MODEL[[#This Row],[Goal]]"
+  },
+  "DX": {
+   "header": "CS",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",CONTROL!$D$198,IF(MODEL[[#This Row],[POS]]=\"DEF\",CONTROL!$D$199,IF(MODEL[[#This Row],[POS]]=\"MID\",CONTROL!$D$200,IF(MODEL[[#This Row],[POS]]=\"FWD\",CONTROL!$D$201,0))))"
+  },
+  "DY": {
+   "header": "LF %9",
+   "formula": "=MODEL[[#This Row],[LF % CS/St]]"
+  },
+  "DZ": {
+   "header": "SF %9",
+   "formula": "=MODEL[[#This Row],[SF % CS/90]]"
+  },
+  "EA": {
+   "header": "9",
+   "formula": "=((MODEL[[#This Row],[LF %9]]*CONTROL!$B$72)+(MODEL[[#This Row],[SF %9]]*CONTROL!$B$73))*MODEL[[#This Row],[CS]]"
+  },
+  "EB": {
+   "header": "2+ GC",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",CONTROL!$E$198,IF(MODEL[[#This Row],[POS]]=\"DEF\",CONTROL!$E$199,IF(MODEL[[#This Row],[POS]]=\"MID\",CONTROL!$E$200,IF(MODEL[[#This Row],[POS]]=\"FWD\",CONTROL!$E$201,0))))"
+  },
+  "EC": {
+   "header": "LF %10",
+   "formula": "=MODEL[[#This Row],[LF % 2+ GC]]"
+  },
+  "ED": {
+   "header": "SF %10",
+   "formula": "=MODEL[[#This Row],[SF % 2+ GC]]"
+  },
+  "EE": {
+   "header": "10",
+   "formula": "=((MODEL[[#This Row],[LF %10]]*CONTROL!$B$78)+(MODEL[[#This Row],[SF %10]]*CONTROL!$B$79))*MODEL[[#This Row],[2+ GC]]"
+  },
+  "EF": {
+   "header": "DC",
+   "formula": "=IF(MODEL[[#This Row],[POS]]=\"GK\",CONTROL!$F$198,IF(MODEL[[#This Row],[POS]]=\"DEF\",CONTROL!$F$199,IF(MODEL[[#This Row],[POS]]=\"MID\",CONTROL!$F$200,IF(MODEL[[#This Row],[POS]]=\"FWD\",CONTROL!$F$201,0))))"
+  },
+  "EG": {
+   "header": "LF %11",
+   "formula": "=MODEL[[#This Row],[LF DC %]]"
+  },
+  "EH": {
+   "header": "SF %11",
+   "formula": "=MODEL[[#This Row],[SF DC %]]"
+  },
+  "EI": {
+   "header": "11",
+   "formula": "=((MODEL[[#This Row],[LF %11]]*CONTROL!$B$86)+(MODEL[[#This Row],[SF %11]]*CONTROL!$B$87))*MODEL[[#This Row],[DC]]"
+  },
+  "EJ": {
+   "header": "TOTAL",
+   "formula": "=MODEL[[#This Row],[1]]+MODEL[[#This Row],[2]]+MODEL[[#This Row],[3]]+MODEL[[#This Row],[4]]+MODEL[[#This Row],[5]]+MODEL[[#This Row],[6]]+MODEL[[#This Row],[7]]+MODEL[[#This Row],[8]]+MODEL[[#This Row],[9]]+MODEL[[#This Row],[10]]+MODEL[[#This Row],[11]]"
+  },
+  "EK": {
+   "header": "1A",
+   "formula": "=IFERROR(INDEX(PSPT[Starts],MATCH(MODEL[[#This Row],[FPL_Name]],PSPT[Player],0)),0)"
+  },
+  "EL": {
+   "header": "1B",
+   "formula": "=IFERROR(INDEX(PSPT[Starts],MATCH(MODEL[[#This Row],[web_name]],PSPT[Player],0)),0)"
+  },
+  "EM": {
+   "header": "1C",
+   "formula": "=IFERROR(INDEX(PSPT[Starts],MATCH(MODEL[[#This Row],[FBRef_Name]],PSPT[Player],0)),0)"
+  },
+  "EN": {
+   "header": "1D",
+   "formula": "=IFERROR(INDEX(PSPT[Starts],MATCH(MODEL[[#This Row],[Alt Name 2]],PSPT[Player],0)),0)"
+  },
+  "EO": {
+   "header": "Previous Season Starts1",
+   "formula": "=IF(OR(EK2+EL2+EM2+EN2=EK2,EK2+EL2+EM2+EN2=EL2,EK2+EL2+EM2+EN2=EM2,EK2+EL2+EM2+EN2=EN2),EK2+EL2+EM2+EN2,(EK2+EL2+EM2+EN2)/2)"
+  },
+  "EP": {
+   "header": "2A",
+   "formula": "=IFERROR(INDEX(PSPT[Subs],MATCH(MODEL[[#This Row],[FPL_Name]],PSPT[Player],0)),0)"
+  },
+  "EQ": {
+   "header": "2B",
+   "formula": "=IFERROR(INDEX(PSPT[Subs],MATCH(MODEL[[#This Row],[web_name]],PSPT[Player],0)),0)"
+  },
+  "ER": {
+   "header": "2C",
+   "formula": "=IFERROR(INDEX(PSPT[Subs],MATCH(MODEL[[#This Row],[FBRef_Name]],PSPT[Player],0)),0)"
+  },
+  "ES": {
+   "header": "2D",
+   "formula": "=IFERROR(INDEX(PSPT[Subs],MATCH(MODEL[[#This Row],[Alt Name 2]],PSPT[Player],0)),0)"
+  },
+  "ET": {
+   "header": "Previous Season Subs1",
+   "formula": "=IF(OR(EP2+EQ2+ER2+ES2=EP2,EP2+EQ2+ER2+ES2=EQ2,EP2+EQ2+ER2+ES2=ER2,EP2+EQ2+ER2+ES2=ES2),EP2+EQ2+ER2+ES2,(EP2+EQ2+ER2+ES2)/2)"
+  },
+  "EU": {
+   "header": "3A",
+   "formula": "=IFERROR(INDEX(PSPT[unSub],MATCH(MODEL[[#This Row],[FPL_Name]],PSPT[Player],0)),0)"
+  },
+  "EV": {
+   "header": "3B",
+   "formula": "=IFERROR(INDEX(PSPT[unSub],MATCH(MODEL[[#This Row],[web_name]],PSPT[Player],0)),0)"
+  },
+  "EW": {
+   "header": "3C",
+   "formula": "=IFERROR(INDEX(PSPT[unSub],MATCH(MODEL[[#This Row],[FBRef_Name]],PSPT[Player],0)),0)"
+  },
+  "EX": {
+   "header": "3D",
+   "formula": "=IFERROR(INDEX(PSPT[unSub],MATCH(MODEL[[#This Row],[Alt Name 2]],PSPT[Player],0)),0)"
+  },
+  "EY": {
+   "header": "Previous Season UnSub1",
+   "formula": "=IF(OR(EU2+EV2+EW2+EX2=EU2,EU2+EV2+EW2+EX2=EV2,EU2+EV2+EW2+EX2=EW2,EU2+EV2+EW2+EX2=EX2),EU2+EV2+EW2+EX2,(EU2+EV2+EW2+EX2)/2)"
+  },
+  "EZ": {
+   "header": "4A",
+   "formula": "=IFERROR(INDEX(PT[Starts],MATCH(MODEL[[#This Row],[FPL_Name]],PT[Player],0)),0)"
+  },
+  "FA": {
+   "header": "4B",
+   "formula": "=IFERROR(INDEX(PT[Starts],MATCH(MODEL[[#This Row],[web_name]],PT[Player],0)),0)"
+  },
+  "FB": {
+   "header": "4C",
+   "formula": "=IFERROR(INDEX(PT[Starts],MATCH(MODEL[[#This Row],[FBRef_Name]],PT[Player],0)),0)"
+  },
+  "FC": {
+   "header": "4D",
+   "formula": "=IFERROR(INDEX(PT[Starts],MATCH(MODEL[[#This Row],[Alt Name 2]],PT[Player],0)),0)"
+  },
+  "FD": {
+   "header": "Starts1",
+   "formula": "=IF(OR(EZ2+FA2+FB2+FC2=EZ2,EZ2+FA2+FB2+FC2=FA2,EZ2+FA2+FB2+FC2=FB2,EZ2+FA2+FB2+FC2=FC2),EZ2+FA2+FB2+FC2,(EZ2+FA2+FB2+FC2)/2)"
+  },
+  "FE": {
+   "header": "5A",
+   "formula": "=IFERROR(INDEX(PT[Subs],MATCH(MODEL[[#This Row],[FPL_Name]],PT[Player],0)),0)"
+  },
+  "FF": {
+   "header": "5B",
+   "formula": "=IFERROR(INDEX(PT[Subs],MATCH(MODEL[[#This Row],[web_name]],PT[Player],0)),0)"
+  },
+  "FG": {
+   "header": "5C",
+   "formula": "=IFERROR(INDEX(PT[Subs],MATCH(MODEL[[#This Row],[FBRef_Name]],PT[Player],0)),0)"
+  },
+  "FH": {
+   "header": "5D",
+   "formula": "=IFERROR(INDEX(PT[Subs],MATCH(MODEL[[#This Row],[Alt Name 2]],PT[Player],0)),0)"
+  },
+  "FI": {
+   "header": "Subs1",
+   "formula": "=IF(OR(FE2+FF2+FG2+FH2=FE2,FE2+FF2+FG2+FH2=FF2,FE2+FF2+FG2+FH2=FG2,FE2+FF2+FG2+FH2=FH2),FE2+FF2+FG2+FH2,(FE2+FF2+FG2+FH2)/2)"
+  },
+  "FJ": {
+   "header": "6A",
+   "formula": "=IFERROR(INDEX(PT[unSub],MATCH(MODEL[[#This Row],[FPL_Name]],PT[Player],0)),0)"
+  },
+  "FK": {
+   "header": "6B",
+   "formula": "=IFERROR(INDEX(PT[unSub],MATCH(MODEL[[#This Row],[web_name]],PT[Player],0)),0)"
+  },
+  "FL": {
+   "header": "6C",
+   "formula": "=IFERROR(INDEX(PT[unSub],MATCH(MODEL[[#This Row],[FBRef_Name]],PT[Player],0)),0)"
+  },
+  "FM": {
+   "header": "6D",
+   "formula": "=IFERROR(INDEX(PT[unSub],MATCH(MODEL[[#This Row],[Alt Name 2]],PT[Player],0)),0)"
+  },
+  "FN": {
+   "header": "UnSub1",
+   "formula": "=IF(OR(FJ2+FK2+FL2+FM2=FJ2,FJ2+FK2+FL2+FM2=FK2,FJ2+FK2+FL2+FM2=FL2,FJ2+FK2+FL2+FM2=FM2),FJ2+FK2+FL2+FM2,(FJ2+FK2+FL2+FM2)/2)"
+  },
+  "FO": {
+   "header": "7A",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Start],MATCH(MODEL[[#This Row],[FPL_Name]],PSPT[Player],0)),0)"
+  },
+  "FP": {
+   "header": "7B",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Start],MATCH(MODEL[[#This Row],[web_name]],PSPT[Player],0)),0)"
+  },
+  "FQ": {
+   "header": "7C",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Start],MATCH(MODEL[[#This Row],[FBRef_Name]],PSPT[Player],0)),0)"
+  },
+  "FR": {
+   "header": "7D",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Start],MATCH(MODEL[[#This Row],[Alt Name 2]],PSPT[Player],0)),0)"
+  },
+  "FS": {
+   "header": "Previous Season Mn/Start",
+   "formula": "=IF(OR(FO2+FP2+FQ2+FR2=FO2,FO2+FP2+FQ2+FR2=FP2,FO2+FP2+FQ2+FR2=FQ2,FO2+FP2+FQ2+FR2=FR2),FO2+FP2+FQ2+FR2,(FO2+FP2+FQ2+FR2)/2)"
+  },
+  "FT": {
+   "header": "8A",
+   "formula": "=IFERROR(INDEX(PT[Mn/Start],MATCH(MODEL[[#This Row],[FPL_Name]],PT[Player],0)),0)"
+  },
+  "FU": {
+   "header": "8B",
+   "formula": "=IFERROR(INDEX(PT[Mn/Start],MATCH(MODEL[[#This Row],[web_name]],PT[Player],0)),0)"
+  },
+  "FV": {
+   "header": "8C",
+   "formula": "=IFERROR(INDEX(PT[Mn/Start],MATCH(MODEL[[#This Row],[FBRef_Name]],PT[Player],0)),0)"
+  },
+  "FW": {
+   "header": "8D",
+   "formula": "=IFERROR(INDEX(PT[Mn/Start],MATCH(MODEL[[#This Row],[Alt Name 2]],PT[Player],0)),0)"
+  },
+  "FX": {
+   "header": "Mn/Start1",
+   "formula": "=IF(OR(FT2+FU2+FV2+FW2=FT2,FT2+FU2+FV2+FW2=FU2,FT2+FU2+FV2+FW2=FV2,FT2+FU2+FV2+FW2=FW2),FT2+FU2+FV2+FW2,(FT2+FU2+FV2+FW2)/2)"
+  },
+  "FY": {
+   "header": "9A",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Sub],MATCH(MODEL[[#This Row],[FPL_Name]],PSPT[Player],0)),0)"
+  },
+  "FZ": {
+   "header": "9B",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Sub],MATCH(MODEL[[#This Row],[web_name]],PSPT[Player],0)),0)"
+  },
+  "GA": {
+   "header": "9C",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Sub],MATCH(MODEL[[#This Row],[FBRef_Name]],PSPT[Player],0)),0)"
+  },
+  "GB": {
+   "header": "9D",
+   "formula": "=IFERROR(INDEX(PSPT[Mn/Sub],MATCH(MODEL[[#This Row],[Alt Name 2]],PSPT[Player],0)),0)"
+  },
+  "GC": {
+   "header": "Previous Season Mn/Sub",
+   "formula": "=IF(OR(FY2+FZ2+GA2+GB2=FY2,FY2+FZ2+GA2+GB2=FZ2,FY2+FZ2+GA2+GB2=GA2,FY2+FZ2+GA2+GB2=GB2),FY2+FZ2+GA2+GB2,(FY2+FZ2+GA2+GB2)/2)"
+  },
+  "GD": {
+   "header": "10A",
+   "formula": "=IFERROR(INDEX(PT[Mn/Sub],MATCH(MODEL[[#This Row],[FPL_Name]],PT[Player],0)),0)"
+  },
+  "GE": {
+   "header": "10B",
+   "formula": "=IFERROR(INDEX(PT[Mn/Sub],MATCH(MODEL[[#This Row],[web_name]],PT[Player],0)),0)"
+  },
+  "GF": {
+   "header": "10C",
+   "formula": "=IFERROR(INDEX(PT[Mn/Sub],MATCH(MODEL[[#This Row],[FBRef_Name]],PT[Player],0)),0)"
+  },
+  "GG": {
+   "header": "10D",
+   "formula": "=IFERROR(INDEX(PT[Mn/Sub],MATCH(MODEL[[#This Row],[Alt Name 2]],PT[Player],0)),0)"
+  },
+  "GH": {
+   "header": "Mn/Sub1",
+   "formula": "=IF(OR(GD2+GE2+GF2+GG2=GD2,GD2+GE2+GF2+GG2=GE2,GD2+GE2+GF2+GG2=GF2,GD2+GE2+GF2+GG2=GG2),GD2+GE2+GF2+GG2,(GD2+GE2+GF2+GG2)/2)"
+  }
+ }
+}

@@ -1,0 +1,239 @@
+{
+ "sheet": "FIXTURES",
+ "header_row": 1,
+ "data_row": 2,
+ "columns": {
+  "A": {
+   "header": "code",
+   "formula": "2645195"
+  },
+  "B": {
+   "header": "event",
+   "formula": "1"
+  },
+  "C": {
+   "header": "finished",
+   "formula": "False"
+  },
+  "D": {
+   "header": "finished_provisional",
+   "formula": "False"
+  },
+  "E": {
+   "header": "id",
+   "formula": "1"
+  },
+  "F": {
+   "header": "kickoff_time",
+   "formula": "2026-08-21T19:00:00Z"
+  },
+  "G": {
+   "header": "minutes",
+   "formula": "0"
+  },
+  "H": {
+   "header": "provisional_start_time",
+   "formula": "False"
+  },
+  "I": {
+   "header": "started",
+   "formula": "False"
+  },
+  "J": {
+   "header": "team_a",
+   "formula": "7"
+  },
+  "K": {
+   "header": "team_a_score",
+   "formula": null
+  },
+  "L": {
+   "header": "team_h",
+   "formula": "1"
+  },
+  "M": {
+   "header": "team_h_score",
+   "formula": null
+  },
+  "N": {
+   "header": "stats",
+   "formula": null
+  },
+  "O": {
+   "header": "team_h_difficulty",
+   "formula": "2"
+  },
+  "P": {
+   "header": "team_a_difficulty",
+   "formula": "5"
+  },
+  "Q": {
+   "header": "pulse_id",
+   "formula": "0"
+  },
+  "AA": {
+   "header": "GW",
+   "formula": "=FIXTURES[[#This Row],[event]]"
+  },
+  "AB": {
+   "header": "HOMECODE",
+   "formula": "=FIXTURES[[#This Row],[event]]&\"-\"&FIXTURES[[#This Row],[team_h]]"
+  },
+  "AC": {
+   "header": "AWAY",
+   "formula": "=FIXTURES[[#This Row],[team_a]]"
+  },
+  "AD": {
+   "header": "AWAYCODE",
+   "formula": "=FIXTURES[[#This Row],[event]]&\"-\"&FIXTURES[[#This Row],[team_a]]"
+  },
+  "AE": {
+   "header": "HOME",
+   "formula": "=FIXTURES[[#This Row],[team_h]]"
+  },
+  "AF": {
+   "header": "AWAY2",
+   "formula": "=FIXHELPER[[#This Row],[AWAY]]"
+  },
+  "AG": {
+   "header": "HOMEABRVGW",
+   "formula": "=INDEX(TEAMS[],MATCH(FIXHELPER[[#This Row],[HOME]],TEAMS[id],0),MATCH(\"short_name\",TEAMS[#Headers],0))&FIXHELPER[[#This Row],[GW]]"
+  },
+  "AH": {
+   "header": "AWAYABRVGW",
+   "formula": "=INDEX(TEAMS[],MATCH(FIXHELPER[[#This Row],[AWAY]],TEAMS[id],0),MATCH(\"short_name\",TEAMS[#Headers],0))&FIXHELPER[[#This Row],[GW]]"
+  },
+  "AI": {
+   "header": "HOMEABRVCODE",
+   "formula": "=IF(COUNTIF(INDEX(FIXHELPER[HOMEABRVGW],1):FIXHELPER[[#This Row],[HOMEABRVGW]],FIXHELPER[[#This Row],[HOMEABRVGW]])+COUNTIF(INDEX(FIXHELPER[AWAYABRVGW],1):FIXHELPER[[#This Row],[AWAYABRVGW]],FIXHELPER[[#This Row],[HOMEABRVGW]])>1,FIXHELPER[[#This Row],[HOMEABRVGW]]&\"-2\",FIXHELPER[[#This Row],[HOMEABRVGW]]&\"-1\")"
+  },
+  "AJ": {
+   "header": "AWAYABRVCODE",
+   "formula": "=IF(COUNTIF(INDEX(FIXHELPER[HOMEABRVGW],1):FIXHELPER[[#This Row],[HOMEABRVGW]],FIXHELPER[[#This Row],[AWAYABRVGW]])+COUNTIF(INDEX(FIXHELPER[AWAYABRVGW],1):FIXHELPER[[#This Row],[AWAYABRVGW]],FIXHELPER[[#This Row],[AWAYABRVGW]])>1,FIXHELPER[[#This Row],[AWAYABRVGW]]&\"-2\",FIXHELPER[[#This Row],[AWAYABRVGW]]&\"-1\")"
+  },
+  "AK": {
+   "header": "HOMEABRV",
+   "formula": "=INDEX(TEAMS[],MATCH(FIXHELPER[[#This Row],[HOME]],TEAMS[id],0),MATCH(\"short_name\",TEAMS[#Headers],0))"
+  },
+  "AL": {
+   "header": "AWAYABRV",
+   "formula": "=INDEX(TEAMS[],MATCH(FIXHELPER[[#This Row],[AWAY]],TEAMS[id],0),MATCH(\"short_name\",TEAMS[#Headers],0))"
+  },
+  "AM": {
+   "header": "LOWERHOMEABRV",
+   "formula": "=LOWER(FIXHELPER[[#This Row],[HOMEABRV]])"
+  },
+  "BA": {
+   "header": "TEAM",
+   "formula": "=TEAMS[[#This Row],[short_name]]"
+  },
+  "BB": {
+   "header": "GW1",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BB$1,LEN(BB$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BB$1,LEN(BB$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BB$1,LEN(BB$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BB$1,LEN(BB$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BC": {
+   "header": "GW2",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BC$1,LEN(BC$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BC$1,LEN(BC$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BC$1,LEN(BC$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BC$1,LEN(BC$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BD": {
+   "header": "GW3",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BD$1,LEN(BD$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BD$1,LEN(BD$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BD$1,LEN(BD$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BD$1,LEN(BD$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BE": {
+   "header": "GW4",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BE$1,LEN(BE$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BE$1,LEN(BE$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BE$1,LEN(BE$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BE$1,LEN(BE$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BF": {
+   "header": "GW5",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BF$1,LEN(BF$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BF$1,LEN(BF$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BF$1,LEN(BF$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BF$1,LEN(BF$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BG": {
+   "header": "GW6",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BG$1,LEN(BG$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BG$1,LEN(BG$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BG$1,LEN(BG$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BG$1,LEN(BG$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BH": {
+   "header": "GW7",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BH$1,LEN(BH$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BH$1,LEN(BH$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BH$1,LEN(BH$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BH$1,LEN(BH$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BI": {
+   "header": "GW8",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BI$1,LEN(BI$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BI$1,LEN(BI$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BI$1,LEN(BI$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BI$1,LEN(BI$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BJ": {
+   "header": "GW9",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BJ$1,LEN(BJ$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BJ$1,LEN(BJ$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BJ$1,LEN(BJ$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BJ$1,LEN(BJ$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BK": {
+   "header": "GW10",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BK$1,LEN(BK$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BK$1,LEN(BK$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BK$1,LEN(BK$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BK$1,LEN(BK$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BL": {
+   "header": "GW11",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BL$1,LEN(BL$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BL$1,LEN(BL$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BL$1,LEN(BL$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BL$1,LEN(BL$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BM": {
+   "header": "GW12",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BM$1,LEN(BM$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BM$1,LEN(BM$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BM$1,LEN(BM$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BM$1,LEN(BM$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BN": {
+   "header": "GW13",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BN$1,LEN(BN$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BN$1,LEN(BN$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BN$1,LEN(BN$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BN$1,LEN(BN$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BO": {
+   "header": "GW14",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BO$1,LEN(BO$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BO$1,LEN(BO$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BO$1,LEN(BO$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BO$1,LEN(BO$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BP": {
+   "header": "GW15",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BP$1,LEN(BP$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BP$1,LEN(BP$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BP$1,LEN(BP$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BP$1,LEN(BP$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BQ": {
+   "header": "GW16",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BQ$1,LEN(BQ$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BQ$1,LEN(BQ$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BQ$1,LEN(BQ$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BQ$1,LEN(BQ$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BR": {
+   "header": "GW17",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BR$1,LEN(BR$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BR$1,LEN(BR$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BR$1,LEN(BR$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BR$1,LEN(BR$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BS": {
+   "header": "GW18",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BS$1,LEN(BS$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BS$1,LEN(BS$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BS$1,LEN(BS$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BS$1,LEN(BS$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BT": {
+   "header": "GW19",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BT$1,LEN(BT$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BT$1,LEN(BT$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BT$1,LEN(BT$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BT$1,LEN(BT$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BU": {
+   "header": "GW20",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BU$1,LEN(BU$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BU$1,LEN(BU$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BU$1,LEN(BU$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BU$1,LEN(BU$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BV": {
+   "header": "GW21",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BV$1,LEN(BV$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BV$1,LEN(BV$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BV$1,LEN(BV$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BV$1,LEN(BV$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BW": {
+   "header": "GW22",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BW$1,LEN(BW$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BW$1,LEN(BW$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BW$1,LEN(BW$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BW$1,LEN(BW$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BX": {
+   "header": "GW23",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BX$1,LEN(BX$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BX$1,LEN(BX$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BX$1,LEN(BX$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BX$1,LEN(BX$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BY": {
+   "header": "GW24",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BY$1,LEN(BY$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BY$1,LEN(BY$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BY$1,LEN(BY$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BY$1,LEN(BY$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "BZ": {
+   "header": "GW25",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BZ$1,LEN(BZ$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(BZ$1,LEN(BZ$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BZ$1,LEN(BZ$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(BZ$1,LEN(BZ$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "CA": {
+   "header": "GW26",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(CA$1,LEN(CA$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(CA$1,LEN(CA$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(CA$1,LEN(CA$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(CA$1,LEN(CA$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  },
+  "CB": {
+   "header": "GW27",
+   "formula": "=IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(CB$1,LEN(CB$1)-2)&\"-1\",$AJ$2:$AJ$400,0))),\"\")&IFERROR((INDEX($AM$2:$AM$400,MATCH($BA2&RIGHT(CB$1,LEN(CB$1)-2)&\"-2\",$AJ$2:$AJ$400,0))),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(CB$1,LEN(CB$1)-2)&\"-1\",$AI$2:$AI$400,0)),\"\")&IFERROR(INDEX($AL$2:$AL$400,MATCH($BA2&RIGHT(CB$1,LEN(CB$1)-2)&\"-2\",$AI$2:$AI$400,0)),\"\")"
+  }
+ }
+}
