@@ -26,8 +26,10 @@ points → planning-window aggregation → squad optimization.
   manager picks/transfers/chips at the July season rollover, so `fpl archive`
   captures the overall-league leaders (cohort = union of everyone ever in the
   top N) while the season runs; each pass backfills missing gameweeks, so a
-  missed week self-heals. **`data/archive/` is gitignored but irreplaceable
-  once the season rolls over — back it up.**
+  missed week self-heals. `data/archive/` is gitignored here but is its own
+  git repo, backed up to the private `Dan-Ebbah/fpl-archive` GitHub repo;
+  `scripts/weekly_archive.sh` (run by the `com.fpl-model.archive` launchd
+  agent, Mondays 10:00) does the archive pass then commits and pushes.
 
 ## Layout
 
