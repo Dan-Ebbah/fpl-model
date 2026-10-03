@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fpl-model</title>
+<style>
+  :root {
+    --bg: #101613; --panel: #18211c; --line: #263229;
+    --text: #e8efe9; --muted: #8fa397; --accent: #4cd07d; --accent-dim: #2a5c3e;
+    --warn: #e0b34c; --err: #e06a5a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    padding: 14px 22px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
+  header h1 span { color: var(--accent); }
+  .src { margin-left: auto; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 13px; }
+  main { max-width: 1080px; margin: 0 auto; padding: 18px 22px 60px; }
+  nav { display: flex; gap: 4px; margin-bottom: 18px; }
+  nav button {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    padding: 7px 16px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 14px;
+  }
+  nav button.active { color: var(--text); border-bottom-color: var(--bg); background: var(--panel); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0 8px 8px 8px; padding: 18px; }
+  .controls { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+  .controls label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  input, select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 5px; padding: 6px 8px; font-size: 14px; width: 90px;
+  }
+  input.wide { width: 200px; }
+  button.go {
+    background: var(--accent-dim); color: var(--text); border: 1px solid var(--accent);
+    border-radius: 5px; padding: 7px 18px; font-size: 14px; cursor: pointer;
+  }
+  button.go:hover { background: var(--accent); color: var(--bg); }
+  button.go:disabled { opacity: .5; cursor: wait; }
+  .status { color: var(--muted); font-size: 13px; min-height: 20px; margin: 4px 0 12px; }
+  .status.err { color: var(--err); }
+  .summary { display: flex; gap: 28px; margin: 8px 0 16px; flex-wrap: wrap; }
+  .summary .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .summary .stat span { color: var(--muted); font-size: 12px; }
+  .cols { display: flex; gap: 28px; flex-wrap: wrap; }
+  .cols > div { flex: 1 1 300px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 8px; }
+  .xi-row { margin: 3px 0; }
+  .xi-row .pos { display: inline-block; width: 38px; color: var(--muted); font-size: 12px; }
+  .cap { color: var(--accent); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+  th, td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; cursor: default; }
+  td.num, th.num { text-align: right; }
+  .scroll { overflow-x: auto; }
+  .muted { color: var(--muted); }
+  a.plink { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--muted); }
+  a.plink:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  a.plink.cap { color: var(--accent); font-weight: 600; }
+  .say {
+    margin: 6px 0; padding: 8px 12px; background: var(--bg);
+    border-left: 3px solid var(--accent-dim); border-radius: 0 5px 5px 0;
+  }
+  .fix {
+    display: inline-block; margin: 2px 6px 2px 0; padding: 3px 8px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .fix b { color: var(--accent); font-weight: 600; }
+  a.vslink { color: var(--muted); text-decoration: none; font-size: 12px; }
+  a.vslink:hover { color: var(--accent); }
+  .cmp-side { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .cmp-side .say { background: var(--panel); }
+</style>
+</head>
+<body>
+<header>
+  <h1>fpl-model <span>squad lab</span></h1>
+  <div class="src">
+    <label><input type="checkbox" id="live" checked style="width:auto"> live data</label>
+    <button class="go" id="repull" title="re-pull the FPL API (also saves a snapshot)">Refresh pull</button>
+  </div>
+</header>
+<main>
+  <nav>
+    <button data-tab="team" class="active">My Team</button>
+    <button data-tab="squad">Squad</button>
+    <button data-tab="predict">Predictions</button>
+    <button data-tab="player">Player</button>
+    <button data-tab="compare">Compare</button>
+  </nav>
+
+  <section class="panel" id="tab-team">
+    <div class="controls">
+      <label>entry id <input type="number" id="tm-entry" class="wide" placeholder="from your Points page URL"></label>
+      <label>to GW <input type="number" id="tm-to" min="1" max="38" placeholder="next+4"></label>
+      <label>max transfers <input type="number" id="tm-max" min="0" max="15" placeholder="any"></label>
+      <label>free transfers <input type="number" id="tm-ft" min="0" max="5" placeholder="auto"></label>
+      <label>bank £ <input type="number" id="tm-bank" step="0.1" placeholder="auto"></label>
+      <label>hit cost <input type="number" id="tm-hit" value="4" step="1" min="0"></label>
+      <label title="xP a free transfer must beat to be worth using">FT value <input type="number" id="tm-ftv" value="1.5" step="0.5" min="0"></label>
+      <label>bench weight <input type="number" id="tm-bw" value="0.1" step="0.05" min="0" max="1"></label>
+      <label>lock <input type="text" id="tm-lock" class="wide" placeholder="Haaland"></label>
+      <label>exclude <input type="text" id="tm-excl" class="wide" placeholder="Salah"></label>
+      <label><input type="checkbox" id="tm-wc" style="width:auto"> wildcard</label>
+      <button class="go" id="tm-run">Plan</button>
+    </div>
+    <div class="status" id="tm-status">Enter your entry id once (it is remembered) and hit Plan. Always uses live data.</div>
+    <div id="tm-out" hidden>
+      <div class="status" id="tm-head"></div>
+      <div class="summary">
+        <div class="stat"><b id="tm-ft-out"></b><span>free transfers</span></div>
+        <div class="stat"><b id="tm-bank-out"></b><span>bank (£m)</span></div>
+        <div class="stat"><b id="tm-value"></b><span>squad value, selling (£m)</span></div>
+        <div class="stat"><b id="tm-chips"></b><span>chips left</span></div>
+      </div>
+      <div id="tm-warn"></div>
+      <h3>Recommended transfers</h3>
+      <div id="tm-transfers"></div>
+      <div class="summary">
+        <div class="stat"><b id="tm-base"></b><span>xP standing pat</span></div>
+        <div class="stat"><b id="tm-prop"></b><span>xP with transfers</span></div>
+        <div class="stat"><b id="tm-gain"></b><span>net gain</span></div>
+        <div class="stat"><b id="tm-bank-after"></b><span>bank after (£m)</span></div>
+      </div>
+      <div class="cols">
+        <div>
+          <h3 id="tm-xi-title">Next XI</h3>
+          <div id="tm-xi"></div>
+          <h3>Bench order</h3>
+          <div id="tm-bench" class="muted"></div>
+        </div>
+        <div>
+          <h3>Captain by gameweek</h3>
+          <div id="tm-caps"></div>
+        </div>
+      </div>
+      <h3>Your current 15</h3>
+      <div class="scroll"><table id="tm-table"></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-squad" hidden>
+    <div class="controls">
+      <label>from GW <input type="number" id="sq-from" value="1" min="1" max="38"></label>
+      <label>to GW <input type="number" id="sq-to" value="8" min="1" max="38"></label>
+      <label>bench weight <input type="number" id="sq-bw" value="0.1" step="0.05" min="0" max="1"></label>
+      <label>lock (comma-sep) <input type="text" id="sq-lock" class="wide" placeholder="Haaland, Saka"></label>
+      <label>exclude <input type="text" id="sq-excl" class="wide" placeholder="Salah"></label>
+      <button class="go" id="sq-run">Solve</button>
+    </div>
+    <div class="status" id="sq-status">Set the window and hit Solve.</div>
+    <div id="sq-out" hidden>
+      <div class="summary">
+        <div class="stat"><b id="sq-xp"></b><span>expected points</span></div>
+        <div class="stat"><b id="sq-cost"></b><span>cost (£m)</span></div>
+        <div class="stat"><b id="sq-form"></b><span>first-GW formation</span></div>
+      </div>
+      <div class="cols">
+        <div>
+          <h3 id="sq-xi-title">First XI</h3>
+          <div id="sq-xi"></div>
+          <h3>Bench</h3>
+          <div id="sq-bench" class="muted"></div>
+        </div>
+        <div>
+          <h3>Captain by gameweek</h3>
+          <div id="sq-caps"></div>
+        </div>
+      </div>
+      <h3>Full squad</h3>
+      <div class="scroll"><table id="sq-table"></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-predict" hidden>
+    <div class="controls">
+      <label>from GW <input type="number" id="pr-from" value="1" min="1" max="38"></label>
+      <label>to GW <input type="number" id="pr-to" value="8" min="1" max="38"></label>
+      <label>position <select id="pr-pos"><option value="">all</option><option>GK</option><option>DEF</option><option>MID</option><option>FWD</option></select></label>
+      <label>team <input type="text" id="pr-team" placeholder="ARS"></label>
+      <label>max £ <input type="number" id="pr-max" step="0.5" placeholder="8"></label>
+      <label>sort <select id="pr-sort"><option value="pts">points</option><option value="value">value</option><option value="price">price</option></select></label>
+      <button class="go" id="pr-run">Rank</button>
+    </div>
+    <div class="status" id="pr-status"></div>
+    <div class="scroll"><table id="pr-table"></table></div>
+  </section>
+
+  <section class="panel" id="tab-player" hidden>
+    <div class="controls">
+      <label>player <input type="text" id="pl-name" class="wide" placeholder="Haaland"></label>
+      <label>from GW <input type="number" id="pl-from" value="1" min="1" max="38"></label>
+      <label>to GW <input type="number" id="pl-to" value="8" min="1" max="38"></label>
+      <button class="go" id="pl-run">Show</button>
+    </div>
+    <div class="status" id="pl-status">Tip: click any player name in the Squad or Predictions tables.</div>
+    <div id="pl-verdict" hidden>
+      <div class="summary" id="pl-head"></div>
+      <div id="pl-say"></div>
+      <h3>Fixtures in window</h3>
+      <div id="pl-fix" class="muted"></div>
+      <h3>Per-gameweek breakdown <span class="muted" style="text-transform:none;letter-spacing:0">(uppercase opponent = home)</span></h3>
+    </div>
+    <div class="scroll"><table id="pl-table"></table></div>
+  </section>
+
+  <section class="panel" id="tab-compare" hidden>
+    <div class="controls">
+      <label>model's pick <input type="text" id="cmp-a" class="wide" placeholder="Calvert-Lewin"></label>
+      <label>your suggestion <input type="text" id="cmp-b" class="wide" placeholder="Richarlison"></label>
+      <label>from GW <input type="number" id="cmp-from" value="1" min="1" max="38"></label>
+      <label>to GW <input type="number" id="cmp-to" value="8" min="1" max="38"></label>
+      <button class="go" id="cmp-run">Compare</button>
+    </div>
+    <div class="status" id="cmp-status">Put any two players head-to-head — or hit &ldquo;vs&rdquo; next to a squad pick.</div>
+    <div id="cmp-out" hidden>
+      <div class="status" id="cmp-headline"></div>
+      <div class="cols">
+        <div class="cmp-side" id="cmp-side-a"></div>
+        <div class="cmp-side" id="cmp-side-b"></div>
+      </div>
+      <h3>Gameweek by gameweek</h3>
+      <div class="scroll"><table id="cmp-table"></table></div>
+    </div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const live = () => $('live').checked ? '1' : '0';
+let forcePull = false;
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  ['team','squad','predict','player','compare'].forEach(t => $('tab-'+t).hidden = t !== b.dataset.tab);
+});
+
+async function call(path, params, statusEl, btn) {
+  const q = new URLSearchParams({...params, refresh: live(), ...(forcePull ? {force:'1'} : {})});
+  statusEl.textContent = 'working…'; statusEl.classList.remove('err');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch(path + '?' + q);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    forcePull = false;
+    statusEl.textContent = '';
+    return j;
+  } catch (e) {
+    statusEl.textContent = e.message; statusEl.classList.add('err');
+    return null;
+  } finally { if (btn) btn.disabled = false; }
+}
+
+function renderTable(el, rows, cols) {
+  const num = v => typeof v === 'number';
+  el.innerHTML = '<tr>' + cols.map(c =>
+    `<th class="${num(rows[0]?.[c.k]) ? 'num' : ''}">${c.h}</th>`).join('') + '</tr>' +
+    rows.map(r => '<tr>' + cols.map(c => {
+      let v = r[c.k];
+      if (num(v)) v = v.toFixed(c.d ?? 2);
+      if (c.click) v = `<a href="#" class="plink" data-name="${r[c.k]}">${v}</a>`;
+      if (c.vs) v = `<a href="#" class="vslink" data-name="${r[c.vs]}">vs…</a>`;
+      return `<td class="${num(r[c.k]) ? 'num' : ''}">${v ?? ''}</td>`;
+    }).join('') + '</tr>').join('');
+  el.querySelectorAll('a.plink').forEach(a => a.onclick = e => {
+    e.preventDefault(); openPlayer(a.dataset.name);
+  });
+  el.querySelectorAll('a.vslink').forEach(a => a.onclick = e => {
+    e.preventDefault(); openCompare(a.dataset.name);
+  });
+}
+
+function openPlayer(name) {
+  document.querySelector('nav button[data-tab="player"]').click();
+  $('pl-name').value = name;
+  $('pl-run').click();
+}
+
+function openCompare(name) {
+  document.querySelector('nav button[data-tab="compare"]').click();
+  $('cmp-a').value = name;
+  $('cmp-b').value = '';
+  $('cmp-out').hidden = true;
+  $('cmp-status').textContent = `Comparing ${name} — type your suggestion and hit Compare.`;
+  $('cmp-b').focus();
+}
+
+function sideCard(v) {
+  return `
+    <div class="summary">
+      <div class="stat"><b>${v.name}</b><span>${v.team} · ${v.pos} · £${v.price.toFixed(1)}m</span></div>
+      <div class="stat"><b>${v.xp.toFixed(1)}</b><span>xP GW${v.window[0]}–${v.window[1]}</span></div>
+      <div class="stat"><b>#${v.rank}</b><span>overall</span></div>
+      <div class="stat"><b>${(v.start_pct*100).toFixed(0)}%</b><span>start prob.</span></div>
+    </div>` + v.verdict.map(s => `<div class="say">${s}</div>`).join('');
+}
+
+try { $('tm-entry').value = localStorage.getItem('fpl-entry') || ''; } catch (e) {}
+
+$('tm-run').onclick = async () => {
+  const entry = $('tm-entry').value.trim();
+  try { if (entry) localStorage.setItem('fpl-entry', entry); } catch (e) {}
+  const j = await call('/api/team', {
+    entry, to: $('tm-to').value, max_transfers: $('tm-max').value, ft: $('tm-ft').value,
+    bank: $('tm-bank').value, hit_cost: $('tm-hit').value, ft_value: $('tm-ftv').value, bench_weight: $('tm-bw').value,
+    lock: $('tm-lock').value, exclude: $('tm-excl').value, wildcard: $('tm-wc').checked ? '1' : '0',
+  }, $('tm-status'), $('tm-run'));
+  if (!j) return;
+  $('tm-out').hidden = false;
+  const link = (name, cls='') => `<a href="#" class="plink ${cls}" data-name="${name}">${name}</a>`;
+  const rank = j.overall_rank ? j.overall_rank.toLocaleString() : 'n/a';
+  $('tm-head').innerHTML = `<b>${j.team_name}</b> (${j.manager}, entry ${j.entry}) — ${j.total_points ?? '?'} pts, `
+    + `overall rank ${rank}. Squad as locked for GW${j.gw}; planning GW${j.from_gw}–${j.to_gw}.`;
+  $('tm-ft-out').textContent = j.free_transfers;
+  $('tm-bank-out').textContent = j.bank.toFixed(1);
+  $('tm-value').textContent = j.squad_value.toFixed(1);
+  $('tm-chips').textContent = j.chips_available.join(', ') || 'none';
+  $('tm-warn').innerHTML = j.warnings.map(w => `<div class="say">! ${w}</div>`).join('');
+  $('tm-transfers').innerHTML = j.transfers.length
+    ? j.transfers.map(t => `<div class="xi-row"><span class="pos">${t.pos}</span>`
+        + `OUT ${link(t.out)} <span class="muted">(${t.out_team}, £${t.out_sell.toFixed(1)}m, ${t.out_xp.toFixed(1)} xP)</span>`
+        + ` &rarr; IN ${link(t.in, 'cap')} <span class="muted">(${t.in_team}, £${t.in_price.toFixed(1)}m, ${t.in_xp.toFixed(1)} xP)</span>`
+        + ` <b>+${t.xp_gain.toFixed(1)}</b>`
+        + ` <a href="#" class="vslink" data-a="${t.in}" data-b="${t.out}">vs…</a></div>`
+        + (t.why || []).map(w => `<div class="say">${w}</div>`).join('')).join('')
+      + (j.verdict || []).map(w => `<div class="say"><b>${w}</b></div>`).join('')
+      + (j.hit_points ? `<div class="muted">takes a ${j.hit_points}-point hit</div>` : '')
+    : '<div class="muted">None — the current 15 is the best use of your money this window.</div>';
+  $('tm-base').textContent = j.baseline_xp.toFixed(1);
+  $('tm-prop').textContent = j.proposal_xp.toFixed(1);
+  $('tm-gain').textContent = (j.gain >= 0 ? '+' : '') + j.gain.toFixed(1);
+  $('tm-bank-after').textContent = j.bank_after.toFixed(1);
+  $('tm-xi-title').textContent = `GW${j.from_gw} XI (${j.formation}, ${j.xi_xp.toFixed(1)} xP)`;
+  $('tm-xi').innerHTML = ['GK','DEF','MID','FWD'].map(p =>
+    `<div class="xi-row"><span class="pos">${p}</span>` +
+    j.xi.filter(r => r.POS === p).map(r =>
+      link(r.FPL_Name, r.captain ? 'cap' : '') + (r.captain ? ' (C)' : r.vice ? ' (V)' : '')
+      + ` <span class="muted">${r.xp.toFixed(1)}</span>`
+    ).join(', ') + '</div>').join('');
+  $('tm-bench').innerHTML = j.bench.map((r, i) => `${i+1}. ${link(r.FPL_Name)} <span class="muted">${r.xp.toFixed(1)}</span>`).join(', ');
+  $('tm-caps').innerHTML = j.captains.map(c =>
+    `<div class="xi-row"><span class="pos">GW${c.gw}</span>${link(c.FPL_Name)} <span class="muted">(${c.TEAM})</span></div>`).join('');
+  $('tm-out').querySelectorAll('a.plink').forEach(a => a.onclick = e => {
+    e.preventDefault(); openPlayer(a.dataset.name);
+  });
+  $('tm-out').querySelectorAll('a.vslink').forEach(a => a.onclick = e => {
+    e.preventDefault();
+    document.querySelector('nav button[data-tab="compare"]').click();
+    $('cmp-a').value = a.dataset.a; $('cmp-b').value = a.dataset.b;
+    $('cmp-from').value = j.from_gw; $('cmp-to').value = j.to_gw;
+    $('cmp-run').click();
+  });
+  renderTable($('tm-table'), j.current, [
+    {k:'FPL_Name',h:'player',click:true},{k:'TEAM',h:'team'},{k:'POS',h:'pos'},
+    {k:'purchase',h:'paid £',d:1},{k:'sell',h:'sell £',d:1},{k:'chance',h:'fit',d:2},
+    {k:'window_xp',h:'window xP',d:1},{vs:'FPL_Name',h:''},
+  ]);
+};
+$('tm-entry').addEventListener('keydown', e => { if (e.key === 'Enter') $('tm-run').click(); });
+
+$('sq-run').onclick = async () => {
+  const j = await call('/api/squad', {
+    from: $('sq-from').value, to: $('sq-to').value, bench_weight: $('sq-bw').value,
+    lock: $('sq-lock').value, exclude: $('sq-excl').value,
+  }, $('sq-status'), $('sq-run'));
+  if (!j) return;
+  $('sq-out').hidden = false;
+  $('sq-xp').textContent = j.expected_points.toFixed(1);
+  $('sq-cost').textContent = j.cost.toFixed(1);
+  $('sq-form').textContent = j.formation;
+  $('sq-xi-title').textContent = 'GW' + $('sq-from').value + ' XI';
+  const link = (name, cls='') =>
+    `<a href="#" class="plink ${cls}" data-name="${name}">${name}</a>`;
+  $('sq-xi').innerHTML = ['GK','DEF','MID','FWD'].map(p =>
+    `<div class="xi-row"><span class="pos">${p}</span>` +
+    j.xi.filter(r => r.POS === p).map(r =>
+      link(r.FPL_Name, r.captain ? 'cap' : '') + (r.captain ? ' (C)' : '')
+    ).join(', ') + '</div>').join('');
+  $('sq-bench').innerHTML = j.bench.map(n => link(n)).join(', ');
+  $('sq-caps').innerHTML = j.captains.map(c =>
+    `<div class="xi-row"><span class="pos">GW${c.gw}</span>${link(c.FPL_Name)} <span class="muted">(${c.TEAM})</span></div>`).join('');
+  $('sq-out').querySelectorAll('a.plink').forEach(a => a.onclick = e => {
+    e.preventDefault(); openPlayer(a.dataset.name);
+  });
+  renderTable($('sq-table'), j.squad, [
+    {k:'FPL_Name',h:'player',click:true},{k:'TEAM',h:'team'},{k:'POS',h:'pos'},
+    {k:'price',h:'£',d:1},{k:'window_xp',h:'window xP',d:1},
+    {k:'starts',h:'starts',d:0},{k:'captaincies',h:'caps',d:0},
+    {vs:'FPL_Name',h:''},
+  ]);
+};
+
+$('pr-run').onclick = async () => {
+  const j = await call('/api/predictions', {
+    from: $('pr-from').value, to: $('pr-to').value, pos: $('pr-pos').value,
+    team: $('pr-team').value, max_price: $('pr-max').value, sort: $('pr-sort').value,
+  }, $('pr-status'), $('pr-run'));
+  if (!j) return;
+  renderTable($('pr-table'), j.rows, [
+    {k:'FPL_Name',h:'player',click:true},{k:'TEAM',h:'team'},{k:'POS',h:'pos'},
+    {k:'price',h:'£',d:1},{k:'games',h:'games',d:0},
+    {k:'true_pts',h:'xP',d:1},{k:'value',h:'xP/£/game'},
+  ]);
+};
+
+$('pl-run').onclick = async () => {
+  const params = {name: $('pl-name').value, from: $('pl-from').value, to: $('pl-to').value};
+  const [v, j] = await Promise.all([
+    call('/api/verdict', params, $('pl-status'), $('pl-run')),
+    call('/api/player', params, $('pl-status'), null),
+  ]);
+  if (!v || !j) { $('pl-verdict').hidden = true; $('pl-table').innerHTML = ''; return; }
+  $('pl-verdict').hidden = false;
+  $('pl-status').textContent = '';
+  $('pl-head').innerHTML = `
+    <div class="stat"><b>${v.name}</b><span>${v.team} · ${v.pos} · £${v.price.toFixed(1)}m</span></div>
+    <div class="stat"><b>${v.xp.toFixed(1)}</b><span>xP GW${v.window[0]}–${v.window[1]}</span></div>
+    <div class="stat"><b>#${v.rank}</b><span>overall</span></div>
+    <div class="stat"><b>#${v.pos_rank}<span class="muted">/${v.pos_count}</span></b><span>${v.pos}s</span></div>
+    <div class="stat"><b>${(v.start_pct*100).toFixed(0)}%</b><span>start prob.</span></div>`;
+  $('pl-say').innerHTML = v.verdict.map(s => `<div class="say">${s}</div>`).join('');
+  $('pl-fix').innerHTML = v.fixtures.map(f =>
+    `<span class="fix">GW${f.gw} ${f.vs} <b>${f.xp.toFixed(1)}</b></span>`).join(' ');
+  renderTable($('pl-table'), j.rows, [
+    {k:'gw',h:'GW',d:0},{k:'vs',h:'vs'},{k:'goals',h:'goals'},{k:'assists',h:'assists'},
+    {k:'cs',h:'CS'},{k:'gc2',h:'2+GC'},{k:'dc',h:'DC'},{k:'bonus',h:'bonus'},
+    {k:'start_pct',h:'start %'},{k:'if_start',h:'if start'},{k:'true_total',h:'true xP'},
+  ]);
+};
+
+$('cmp-run').onclick = async () => {
+  const j = await call('/api/compare', {
+    a: $('cmp-a').value, b: $('cmp-b').value,
+    from: $('cmp-from').value, to: $('cmp-to').value,
+  }, $('cmp-status'), $('cmp-run'));
+  if (!j) { $('cmp-out').hidden = true; return; }
+  $('cmp-out').hidden = false;
+  const lead = j.xp_diff >= 0 ? j.a : j.b;
+  const margin = Math.abs(j.xp_diff);
+  let head = `<b>${lead.name}</b> leads by <b>${margin.toFixed(1)} xP</b> over the window`;
+  if (margin < 3) head = `Effectively a coin flip — ${head.replace('leads by', 'edges it by')} — your judgment decides`;
+  if (j.price_diff !== 0) {
+    const cheaper = j.price_diff > 0 ? j.b : j.a;
+    head += ` · ${cheaper.name} is £${Math.abs(j.price_diff).toFixed(1)}m cheaper`;
+  }
+  if (!j.same_pos) head += ' · different positions — not a direct swap';
+  $('cmp-headline').innerHTML = head;
+  $('cmp-side-a').innerHTML = sideCard(j.a);
+  $('cmp-side-b').innerHTML = sideCard(j.b);
+  renderTable($('cmp-table'), j.rows, [
+    {k:'gw',h:'GW',d:0},
+    {k:'a_vs',h:j.a.name.split(' ').pop()+' vs'},{k:'a_xp',h:'xP'},
+    {k:'b_vs',h:j.b.name.split(' ').pop()+' vs'},{k:'b_xp',h:'xP'},
+  ]);
+};
+
+$('cmp-b').addEventListener('keydown', e => { if (e.key === 'Enter') $('cmp-run').click(); });
+
+$('repull').onclick = () => {
+  forcePull = true; $('live').checked = true;
+  $('sq-status').textContent = 'next action re-pulls the FPL API';
+};
+
+$('pl-name').addEventListener('keydown', e => { if (e.key === 'Enter') $('pl-run').click(); });
+</script>
+</body>
+</html>

@@ -1,6 +1,11 @@
 .venv/
+.idea/
 __pycache__/
 *.pyc
 .pytest_cache/
 data/snapshots/
 data/archive/
+
+# your own FPL entry id (fpl team --entry)
+data/me.json
+/infra/bootstrap/.terraform/

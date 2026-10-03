@@ -1,0 +1,24 @@
+# Manual priors for players with no Premier League history.
+#
+# Workflow per new signing: look up last season's per-90s on FBRef, pick a
+# league_factor for how their league translates to the PL, and set start_pct
+# from your read of the team news. Delete the entry once the player has
+# enough PL gameweeks that the model's own data takes over (~GW6-8).
+#
+# League factor rules of thumb (attacking output -> PL):
+#   Bundesliga / Serie A / La Liga  0.75-0.85
+#   Ligue 1 / Eredivisie / Portugal 0.65-0.75
+#   Belgium / Championship / other  0.55-0.65
+#
+# Fields: player (name substring), xg90, xa90, league_factor, start_pct,
+#         team + note for documentation.
+
+players:
+  - player: Tzolis
+    team: ARS
+    xg90: 0.50        # PLACEHOLDER — replace with his FBRef xG/90 from last season
+    xa90: 0.48        # PLACEHOLDER — replace with his FBRef xA/90
+    league_factor: 0.55
+    start_pct: 0.50   # new signing in a stacked attack; raise if he starts GW1 on corners
+    note: >
+      Set-piece taker per reports

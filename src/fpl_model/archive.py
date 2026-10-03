@@ -37,7 +37,13 @@ REQUEST_GAP_S = 0.25
 def _get(path: str, retries: int = 3) -> dict | list | None:
     """GET with backoff; None for 404 (entry gone / GW not played)."""
     for attempt in range(retries):
-        r = requests.get(f"{BASE}/{path}", timeout=30)
+        try:
+            r = requests.get(f"{BASE}/{path}", timeout=30)
+        except (requests.ConnectionError, requests.Timeout):
+            if attempt == retries - 1:
+                raise
+            time.sleep(2**attempt)
+            continue
         if r.status_code == 404:
             return None
         if r.status_code in (429, 500, 502, 503):

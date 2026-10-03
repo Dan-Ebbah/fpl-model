@@ -12,6 +12,16 @@ legal formation each week. Unlike the Excel Solver version this lets the XI
 and captain change week to week while the 15 stay fixed, so squad depth that
 covers bad fixtures is valued correctly.
 
+Transfer mode (`current` given): the budget becomes bank + money raised by
+selling, each player leaving the current 15 is a transfer, transfers beyond
+the free ones cost `hit_cost` points off the objective, and `max_transfers`
+caps them. A banked free transfer has option value, so each free one used
+costs `ft_value` points in the objective (not in the reported xP) — except
+one when you already hold the maximum, since that one is lost anyway. The 15
+still stay fixed across the window, so this answers "what should I do at
+*this* deadline given the next N fixtures" — it does not plan a sequence of
+transfers.
+
 The optimizer exploits any prediction error ruthlessly — treat its output as
 a proposal to check against team news, not an oracle.
 """
@@ -24,6 +34,7 @@ import pandas as pd
 import pulp
 
 POSITION_ORDER = ["GK", "DEF", "MID", "FWD"]
+MAX_FREE_TRANSFERS = 5
 
 
 @dataclass(frozen=True)
@@ -43,9 +54,17 @@ class SquadRules:
 class SquadSolution:
     squad: pd.DataFrame     # one row per picked player, with per-window totals
     lineups: pd.DataFrame   # one row per (gw, player) for starters, captain flagged
-    expected_points: float
+    expected_points: float  # window xP of the chosen squad/XIs (gross of hits)
     cost: float
     status: str
+    objective: float = 0.0  # what the solver maximized: xP - hits - ft_value penalty
+    transfers_in: list[int] = field(default_factory=list)
+    transfers_out: list[int] = field(default_factory=list)
+    hit_points: float = 0.0
+
+    @property
+    def n_transfers(self) -> int:
+        return len(self.transfers_out)
 
 
 def select_pool(
@@ -77,23 +96,37 @@ def optimize_squad(
     bench_weight: float = 0.1,
     locks: set[int] | None = None,
     excludes: set[int] | None = None,
+    current: dict[int, float] | None = None,
+    bank: float = 0.0,
+    free_transfers: int = 1,
+    hit_cost: float = 4.0,
+    max_transfers: int | None = None,
+    ft_value: float = 1.5,
 ) -> SquadSolution:
     """Solve for the optimal squad.
 
     `players`: indexed by player code, columns FPL_Name, TEAM, POS, price.
     `xp`: expected points, indexed by code, one column per gameweek.
     `locks`/`excludes`: player codes forced in or out of the 15.
+    `current`: {code: selling price} of the squad you already own — switches
+    on transfer mode (see module docstring); `price` is then the buy price.
     """
     rules = rules or SquadRules()
+    current = dict(current or {})
     players = players[players["price"].notna() & (players["price"] > 0)]
+    # an excluded player you own must be sold, so he stays in the model as a forced out
+    forced_out = set(excludes or ()) & set(current)
     if excludes:
-        players = players.drop(index=set(excludes) & set(players.index))
+        players = players.drop(index=(set(excludes) - forced_out) & set(players.index))
     xp = xp.reindex(players.index).fillna(0.0)
     codes = list(players.index)
     gws = list(xp.columns)
     missing_locks = set(locks or ()) - set(codes)
     if missing_locks:
         raise ValueError(f"locked players not in candidate pool: {missing_locks}")
+    missing_current = set(current) - set(codes)
+    if missing_current:
+        raise ValueError(f"current squad players not in candidate pool: {missing_current}")
 
     prob = pulp.LpProblem("fpl_squad", pulp.LpMaximize)
     squad = pulp.LpVariable.dicts("squad", codes, cat="Binary")
@@ -101,14 +134,33 @@ def optimize_squad(
     cap = pulp.LpVariable.dicts("cap", (codes, gws), cat="Binary")
 
     xpd = {gw: xp[gw].to_dict() for gw in gws}
-    prob += pulp.lpSum(
+    objective = pulp.lpSum(
         xpd[gw][p] * ((1 - bench_weight) * start[p][gw] + cap[p][gw] + bench_weight * squad[p])
         for gw in gws
         for p in codes
     )
 
     price = players["price"].to_dict()
-    prob += pulp.lpSum(price[p] * squad[p] for p in codes) <= rules.budget
+    if current:
+        # money in from sales + bank must cover the buys
+        raised = pulp.lpSum(current[p] * (1 - squad[p]) for p in current)
+        spent = pulp.lpSum(price[p] * squad[p] for p in codes if p not in current)
+        prob += spent <= bank + raised
+        n_out = pulp.lpSum(1 - squad[p] for p in current)
+        paid = pulp.LpVariable("paid_transfers", lowBound=0, cat="Integer")
+        prob += paid >= n_out - free_transfers
+        objective = objective - hit_cost * paid
+        # free transfers used = n_out - paid; the first is on the house when
+        # the bank is full (it would expire), the rest carry ft_value
+        forfeit = 1 if free_transfers >= MAX_FREE_TRANSFERS else 0
+        charged = pulp.LpVariable("charged_free_transfers", lowBound=0, cat="Integer")
+        prob += charged >= n_out - paid - forfeit
+        objective = objective - ft_value * charged
+        if max_transfers is not None:
+            prob += n_out <= max_transfers
+    else:
+        prob += pulp.lpSum(price[p] * squad[p] for p in codes) <= rules.budget
+    prob += objective
 
     pos_of = players["POS"].to_dict()
     for pos, n in rules.squad_size.items():
@@ -130,6 +182,8 @@ def optimize_squad(
 
     for p in locks or ():
         prob += squad[p] == 1
+    for p in forced_out:
+        prob += squad[p] == 0
 
     status = prob.solve(pulp.PULP_CBC_CMD(msg=False))
     status_name = pulp.LpStatus[status]
@@ -137,6 +191,13 @@ def optimize_squad(
         raise RuntimeError(f"solver finished with status {status_name}")
 
     picked = [p for p in codes if squad[p].value() > 0.5]
+    window_points = sum(
+        xpd[gw][p] * (
+            (1 - bench_weight) * start[p][gw].value() + cap[p][gw].value() + bench_weight
+        )
+        for gw in gws
+        for p in picked
+    )
     lineup_rows = [
         {
             "gw": gw,
@@ -160,10 +221,17 @@ def optimize_squad(
         columns="pos_rank"
     )
 
+    transfers_out = [p for p in current if p not in set(picked)]
+    transfers_in = [p for p in picked if p not in current] if current else []
+    hit_points = hit_cost * max(len(transfers_out) - free_transfers, 0) if current else 0.0
     return SquadSolution(
         squad=squad_df,
         lineups=lineups,
-        expected_points=pulp.value(prob.objective),
+        expected_points=float(window_points),
         cost=float(squad_df["price"].sum()),
         status=status_name,
+        objective=float(pulp.value(prob.objective)),
+        transfers_in=transfers_in,
+        transfers_out=transfers_out,
+        hit_points=hit_points,
     )

@@ -31,9 +31,39 @@ def load_team_strength() -> pd.DataFrame:
     """TABLES sheet: the 20 team rows (rows below are other tables)."""
     t = load("TABLES")
     t = t[t["ABVR"].notna() & (t["ABVR"] != "ABVR")].head(20).copy()
-    for c in ["LF xG/90", "SF xG/90", "LF xGC/90", "SF xGC/90", "LFxSF US xGC FIX"]:
+    for c in [
+        "LF xG/90", "SF xG/90", "LF xGC/90", "SF xGC/90",
+        "LFxSF US xGC FIX", "LF US xGC FIX", "SF US xGC FIX",
+    ]:
         t[c] = pd.to_numeric(t[c], errors="coerce")
     return t
+
+
+def load_control_values() -> pd.Series:
+    """CONTROL sheet cell values (cell coordinate -> value, as text)."""
+    return load("CONTROL_values").set_index("cell")["value"]
+
+
+def load_model_inputs() -> dict:
+    """Everything build_model() needs, from the frozen workbook extracts.
+
+    The API/teams entries are the workbook's snapshot — the live pipeline
+    swaps those two for a fresh bootstrap pull and keeps the rest.
+    """
+    model = load_model()
+    return {
+        "api": load("API")[pd.to_numeric(load("API")["code"], errors="coerce").notna()],
+        "teams": load("TEAMS"),
+        "psapi": load("PSAPI"),
+        "pt": load("PT"),
+        "pspt": load("PSPT"),
+        "pivots": {name: load(f"{name}_delta") for name in ["MINS", "xG", "xA", "DC"]},
+        "team_strength": load_team_strength(),
+        "control": load_control_values(),
+        "name_map": model.drop_duplicates("Code").set_index("Code")[
+            ["FBRef_Name", "Alt Name 2", "POS2"]
+        ],
+    }
 
 
 def load_dcscore() -> tuple[pd.DataFrame, pd.Series]:

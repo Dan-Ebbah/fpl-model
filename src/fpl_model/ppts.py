@@ -55,6 +55,7 @@ def compute_ppts(
     league_avg_xgc: float,
     params: ControlParams,
     manual_start_pct: pd.Series | None = None,
+    fixture_adj: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Compute expected points per (player, gw, slot).
 
@@ -62,6 +63,12 @@ def compute_ppts(
     SF xGC/90, LFxSF US xGC FIX. `dcscore` is indexed by team ABVR with one
     column per position group (CB..CF); `dc_league_avg` is the league-average
     row of the same. `manual_start_pct` maps player code -> override.
+
+    `fixture_adj` is the one deliberate extension point beyond the sheet:
+    per (TEAM, vs_key, is_home, POS) multipliers `goal_mult`, `assist_mult`,
+    `conceded_mult` from style.fixture_adjustments (team venue tilt and
+    positional concession channels). None — the default, and what the parity
+    tests run — leaves every number exactly as the workbook computes it.
     """
     m = model[MODEL_COLS].copy()
     for c in _NUMERIC_MODEL_COLS:
@@ -87,6 +94,14 @@ def compute_ppts(
     attack_mult = 1 + (1 - vs_xg / league_avg_xg)      # "VS xG/90/LA"
     defence_mult = vs_xgc / league_avg_xgc             # "VS xGC/90/LA"
 
+    goal_adj = assist_adj = conceded_adj = 1.0
+    if fixture_adj is not None:
+        key = pd.DataFrame({"TEAM": df["TEAM"].str.upper(), "vs_key": vs_key, "is_home": vs == vs_key, "POS": df["POS"]})
+        adj = key.merge(fixture_adj, on=["TEAM", "vs_key", "is_home", "POS"], how="left")
+        goal_adj = adj["goal_mult"].fillna(1.0).set_axis(df.index)
+        assist_adj = adj["assist_mult"].fillna(1.0).set_axis(df.index)
+        conceded_adj = adj["conceded_mult"].fillna(1.0).set_axis(df.index)
+
     is_gk_def = df["POS"].isin(["GK", "DEF"])
     pts = params.points
 
@@ -96,12 +111,12 @@ def compute_ppts(
     c5 = df["5"]
     c6 = df["6"] * np.where(is_gk_def, attack_mult, defence_mult)
     xa_per_start = df["7"] / pts.assist
-    c7 = xa_per_start * defence_mult * (1 + params.fantasy_assist_boost) * pts.assist
+    c7 = xa_per_start * defence_mult * assist_adj * (1 + params.fantasy_assist_boost) * pts.assist
     xg_per_start = (df["8"] / df["Goal"]).replace([np.inf, -np.inf], 0).fillna(0.0)
-    c8 = xg_per_start * defence_mult * _pos_map(pts.goal, df["POS"])
+    c8 = xg_per_start * defence_mult * goal_adj * _pos_map(pts.goal, df["POS"])
 
     own_xgc = df["TEAM"].map(ts["LFxSF US xGC FIX"])
-    cs_lambda = (own_xgc * vs_xg / league_avg_xg).fillna(0.0)  # expected goals conceded
+    cs_lambda = (own_xgc * vs_xg / league_avg_xg * conceded_adj).fillna(0.0)  # expected goals conceded
     cs_pct = np.exp(-cs_lambda)                                 # Poisson P(0 conceded)
     c9 = _pos_map(pts.clean_sheet, df["POS"]) * cs_pct
     pct_2plus_gc = 1 - cs_pct * (1 + cs_lambda)                 # Poisson P(>=2 conceded)
@@ -140,6 +155,16 @@ def compute_ppts(
         0.0,
     )
 
+    # expected goals / FPL assists in the fixture, marginalised over minutes —
+    # not in the sheet, and no points flow through them: the scorer predictor
+    # reads these. Unlike the sheet's sub path, a non-starter only contributes
+    # if he actually comes on.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        p_sub = ((appearance - start_pct) / (1 - start_pct)).clip(0, 1).fillna(0.0)
+    minutes_factor = np.where(has_fixture, start_pct + (1 - start_pct) * p_sub * sub_minutes_ratio.fillna(0.0), 0.0)
+    exp_goals = (c8 / _pos_map(pts.goal, df["POS"]).replace(0, np.nan)).fillna(0.0) * minutes_factor
+    exp_assists = c7 / pts.assist * minutes_factor
+
     out = df[["Code", "FPL_Name", "TEAM", "POS", "POS2", "gw", "slot"]].copy()
     out["VS"] = vs
     out["H/A"] = home_away
@@ -148,6 +173,7 @@ def compute_ppts(
         ("8", c8), ("9", c9), ("10", c10), ("11", c11),
         ("CS%", cs_pct), ("% 2+ GC", pct_2plus_gc),
         ("Start %", start_pct), ("IF NOT START TOTAL", if_not_start_total),
+        ("exp_goals", exp_goals), ("exp_assists", exp_assists),
     ]:
         out[name] = col
     out["IF START TOTAL"] = if_start_total
