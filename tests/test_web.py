@@ -84,10 +84,10 @@ def test_plan_to_json_shape():
 
 
 def test_sandbox_tables_shape():
-    from fpl_model.cli import _prices, build_pipeline
+    from fpl_model.pipeline import build_pipeline, player_prices
 
     pipe = build_pipeline(refresh=False)
-    t = web.sandbox_tables(pipe.ppts, _prices(False), 6, 10, boot=None, team_form=pipe.team_form)
+    t = web.sandbox_tables(pipe.ppts, player_prices(False), 6, 10, boot=None, team_form=pipe.team_form)
     assert t["gws"] == [6, 7, 8, 9, 10]
     assert len(t["players"]) > 400 and len(t["teams"]) == 20
     p = next(v for v in t["players"].values() if v["name"] == "James Tarkowski")

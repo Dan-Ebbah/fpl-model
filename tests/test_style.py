@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 
 from fpl_model import matchlog, style
-from fpl_model.cli import build_pipeline, scorer_table
+from fpl_model.pipeline import build_pipeline
+from fpl_model.scorers import scorer_table
 from fpl_model.config import DEFAULT_PARAMS
 
 LA = 1.5

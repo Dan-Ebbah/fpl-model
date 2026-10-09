@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from fpl_model import explain, team
-from fpl_model.cli import _prices, build_pipeline
+from fpl_model.pipeline import build_pipeline, player_prices
 from fpl_model.optimizer import optimize_squad, select_pool
 from fpl_model.plan import plan_transfers, squad_frame
 
@@ -13,7 +13,7 @@ from fpl_model.plan import plan_transfers, squad_frame
 @pytest.fixture(scope="module")
 def explained():
     pipe = build_pipeline()  # frozen workbook snapshot: no network, no in-season layer
-    prices = _prices(refresh=False)
+    prices = player_prices(refresh=False)
     players, xp = squad_frame(pipe.ppts, prices, 1, 3)
     best = optimize_squad(select_pool(players, xp.sum(axis=1)), xp)
     codes = [int(c) for c in best.squad["Code"]] if "Code" in best.squad else [int(c) for c in best.squad.index]

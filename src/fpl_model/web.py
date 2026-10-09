@@ -22,12 +22,12 @@ import pandas as pd
 
 HTML_PATH = Path(__file__).parent / "web.html"
 
-_cache: dict = {}  # refresh flag -> cli.Pipeline
+_cache: dict = {}  # refresh flag -> pipeline.Pipeline
 _cache_lock = threading.Lock()
 
 """A simple cache for the pipeline."""
 def _pipeline(refresh: bool, force: bool = False):
-    from .cli import build_pipeline
+    from .pipeline import build_pipeline
 
     with _cache_lock:
         if force or refresh not in _cache:
@@ -40,9 +40,9 @@ def _ppts(refresh: bool, force: bool = False) -> pd.DataFrame:
 
 
 def _prices(refresh: bool) -> pd.Series:
-    from .cli import _prices as cli_prices
+    from .pipeline import player_prices
 
-    return cli_prices(refresh)
+    return player_prices(refresh)
 
 
 def predictions_payload(
@@ -75,7 +75,7 @@ def squad_payload(
     from_gw: int, to_gw: int, refresh: bool, bench_weight: float,
     locks: list[str], excludes: list[str], force: bool = False,
 ) -> dict:
-    from .cli import _resolve_codes
+    from .pipeline import resolve_codes
     from .optimizer import optimize_squad, select_pool
 
     ppts = _ppts(refresh, force)
@@ -88,8 +88,8 @@ def squad_payload(
     )
     players = players[players["price"].notna()]
 
-    lock_codes = _resolve_codes(locks, players)
-    exclude_codes = _resolve_codes(excludes, players)
+    lock_codes = resolve_codes(locks, players)
+    exclude_codes = resolve_codes(excludes, players)
     pool = select_pool(players, xp.sum(axis=1), keep=lock_codes)
     sol = optimize_squad(
         players=pool, xp=xp, bench_weight=bench_weight,
@@ -124,7 +124,7 @@ def team_payload(
 ) -> dict:
     """Your team: reconstructed state + the deadline plan (always live data)."""
     from . import api, explain, team as team_mod
-    from .cli import _prices as cli_prices, _resolve_codes
+    from .pipeline import player_prices, resolve_codes
     from .plan import plan_transfers
 
     entry_id = team_mod.resolve_entry(entry)
@@ -133,13 +133,13 @@ def team_payload(
     if entry:
         team_mod.remember_entry(entry_id)  # only once it resolved to a real team
     pipe = _pipeline(True, force)
-    ppts, prices = pipe.ppts, cli_prices(True, boot)
+    ppts, prices = pipe.ppts, player_prices(True, boot)
     names = ppts.groupby("Code")[["FPL_Name"]].first()
     plan = plan_transfers(
         ppts, prices, my, to_gw=to_gw, bench_weight=bench_weight,
         free_transfers=ft, bank=bank, max_transfers=max_transfers, hit_cost=hit_cost,
-        ft_value=ft_value, wildcard=wildcard, locks=_resolve_codes(locks, names),
-        excludes=_resolve_codes(excludes, names),
+        ft_value=ft_value, wildcard=wildcard, locks=resolve_codes(locks, names),
+        excludes=resolve_codes(excludes, names),
     )
     explain.explain_plan(plan, pipe, prices, ft_value=ft_value)
     return plan_to_json(plan)
@@ -489,7 +489,7 @@ def _num_or_str(v):
 def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -> dict:
     """Live sandbox: your squad + the full player/team tables for the window."""
     from . import api, team as team_mod
-    from .cli import _prices as cli_prices
+    from .pipeline import player_prices
 
     entry_id = team_mod.resolve_entry(entry)
     boot = api.fetch_bootstrap()
@@ -497,7 +497,7 @@ def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -
     if entry:
         team_mod.remember_entry(entry_id)
     pipe = _pipeline(True, force)
-    prices = cli_prices(True, boot)
+    prices = player_prices(True, boot)
     from_gw = my.next_gw
     to_gw = to_gw or from_gw + 4
     tables = sandbox_tables(pipe.ppts, prices, from_gw, to_gw, boot=boot, team_form=pipe.team_form)

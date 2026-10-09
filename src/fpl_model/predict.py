@@ -9,12 +9,31 @@ from __future__ import annotations
 import pandas as pd
 
 
+def gameweek_window(ppts: pd.DataFrame, gw_from: int, gw_to: int) -> pd.DataFrame:
+    """The PPts rows for gameweeks gw_from..gw_to inclusive (blank slots included)."""
+    return ppts[(ppts["gw"] >= gw_from) & (ppts["gw"] <= gw_to)]
+
+
+def has_fixture(vs: pd.Series) -> pd.Series:
+    """True where a fixture slot holds an opponent, the sheet's `LEN(VS) >= 3`.
+
+    Blank slots carry `fixtures.NO_FIXTURE` ("-"); team codes are three
+    letters. A NaN counts as no fixture here — callers that need the
+    `astype(str)` form (NaN kept) keep their own expression on purpose.
+    """
+    return vs.str.len() >= 3
+
+
+def with_fixture(rows: pd.DataFrame) -> pd.DataFrame:
+    """Drop the blank fixture slots."""
+    return rows[has_fixture(rows["VS"])]
+
+
 def aggregate_window(ppts: pd.DataFrame, gw_from: int, gw_to: int) -> pd.DataFrame:
     """Sum projections over [gw_from, gw_to] inclusive, one row per player."""
-    window = ppts[(ppts["gw"] >= gw_from) & (ppts["gw"] <= gw_to)]
-    has_fixture = window["VS"].str.len() >= 3
+    window = gameweek_window(ppts, gw_from, gw_to)
     agg = (
-        window.assign(games=has_fixture.astype(int))
+        window.assign(games=has_fixture(window["VS"]).astype(int))
         .groupby(["Code", "FPL_Name", "TEAM", "POS"], as_index=False)
         .agg(
             games=("games", "sum"),

@@ -34,6 +34,7 @@ import pandas as pd
 
 from . import api, matchlog, reference
 from .inseason import PORT_ONLY, Layers
+from .pipeline import build_pipeline
 
 RESULTS_PATH = api.SNAPSHOT_DIR / "backtest.parquet"
 
@@ -98,7 +99,6 @@ def replay(
     `finished` is the set of completed gameweeks (a round in progress can't be
     scored); defaults to the newest snapshot's view.
     """
-    from .cli import build_pipeline  # cli -> backtest for the command; import late to avoid the cycle
     from .config import DEFAULT_PARAMS
     from .model_build import build_model
 

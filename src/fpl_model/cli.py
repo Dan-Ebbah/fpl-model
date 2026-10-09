@@ -24,167 +24,15 @@ ranked table. Examples:
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 
-from . import api, archive, explain, inseason, matchlog, priors, reference, team as team_mod
-from .config import DEFAULT_PARAMS
-from .fixtures import build_fixture_slots, opponent_grid
-from .model_build import build_model
-from .optimizer import optimize_squad, select_pool
+from . import api, archive, explain, reference, team as team_mod
+from .pipeline import Pipeline, build_pipeline, build_ppts, player_prices, resolve_codes
 from .plan import plan_transfers
-from .ppts import compute_ppts
-from .style import DEFAULT_STYLE, TeamStyle, fixture_adjustments, team_style
 from .predict import aggregate_window, with_value
-
-
-def _live_players(boot: dict | None = None) -> pd.DataFrame:
-    """Current bootstrap players, keyed by code: price, availability, status."""
-    live = pd.DataFrame((boot or api.fetch_bootstrap())["elements"])
-    live["price"] = live["now_cost"] / 10
-    # chance_of_playing_next_round is null when fully fit
-    live["chance"] = live["chance_of_playing_next_round"].fillna(100) / 100
-    return live.set_index("code")[["price", "chance", "status", "web_name"]]
-
-
-@dataclass
-class Pipeline:
-    """Projections plus the intermediate tables the explainer reads."""
-
-    ppts: pd.DataFrame
-    model: pd.DataFrame
-    team_form: pd.DataFrame | None = None  # None when the in-season layer is off
-    style: TeamStyle | None = None
-    boot: dict | None = None
-
-
-def build_pipeline(
-    refresh: bool = False, boot: dict | None = None, fixtures_raw: list[dict] | None = None,
-    use_inseason: bool = True, layers: inseason.Layers | None = None, persist: bool = True,
-    log: pd.DataFrame | None = None, base_model: pd.DataFrame | None = None,
-    gws: range = range(1, 39),
-) -> Pipeline:
-    """The full projection pipeline.
-
-    The last five arguments exist for the backtester. `layers` picks the
-    adjustments and their constants (default: all on; `use_inseason=False` is
-    shorthand for the bare port). `persist=False` stops a replay of an old
-    snapshot being stored as today's. `log` supplies the match log — a replay
-    passes one cut off before the gameweek it predicts, since fetching would
-    leak the future. `base_model` reuses build_model's output across variants
-    of the same snapshot; `gws` limits the fixture grid.
-    """
-    layers = layers or (inseason.ALL_LAYERS if use_inseason else inseason.PORT_ONLY)
-    la_xg, la_xgc = reference.league_average_xg()
-    team_strength = reference.load_team_strength()
-    form = style = fixture_adj = None
-    if refresh:
-        # Rebuild the MODEL player table from the live bootstrap: current
-        # clubs, positions, injury flags, and new players — the frozen inputs
-        # (last-season history) stay as extracted. Fixtures also come live so
-        # rescheduled games land in the right gameweek.
-        boot = boot or api.fetch_bootstrap()
-        fixtures_raw = fixtures_raw or api.fetch_fixtures()
-        if persist:
-            # every fresh pull is persisted: the dated snapshot series is the
-            # backtester's only point-in-time record
-            dest = api.snapshot(bootstrap=boot, fixtures=fixtures_raw)
-            print(f"(live data pulled and stored as snapshot {dest.name})")
-        teams = pd.DataFrame(boot["teams"])
-        api_df = pd.DataFrame(boot["elements"])
-        if base_model is None:
-            inputs = reference.load_model_inputs()
-            inputs["api"], inputs["teams"] = api_df, teams
-            base_model = build_model(points=DEFAULT_PARAMS.points, **inputs)
-        model = base_model
-        fixtures = pd.DataFrame(fixtures_raw)[["event", "team_h", "team_a"]].apply(
-            pd.to_numeric, errors="coerce"
-        )
-        # current-season evidence — only meaningful on live data; the frozen
-        # path below stays the faithful port
-        if layers.form or layers.starts:
-            measured = inseason.team_form(boot, fixtures_raw, team_strength, la_xgc, DEFAULT_PARAMS, layers.params)
-            if layers.form:
-                form = measured
-                team_strength = inseason.adjust_team_strength(team_strength, form)
-        if layers.style:
-            # playing style needs per-match rows (venue, opponent, position)
-            if log is None:
-                log = matchlog.load_match_log(boot, fixtures_raw)
-            if len(log):
-                style = team_style(log, team_strength, la_xgc, DEFAULT_PARAMS, layers.style_params or DEFAULT_STYLE)
-                fixture_adj = fixture_adjustments(style, list(team_strength["ABVR"].str.upper()))
-        if layers.rates:
-            model = inseason.adjust_player_rates(
-                model, api_df, DEFAULT_PARAMS.points, layers.params,
-                team_attack_rel=inseason.team_attack_relative(team_strength, la_xg, DEFAULT_PARAMS),
-                channel_rel=style.attack if style is not None else None,
-            )
-        if layers.starts:
-            model = inseason.adjust_start_rates(model, api_df, measured, layers.params)
-    else:
-        model = reference.load_model()
-        teams = reference.load("TEAMS")
-        fixtures = reference.load("FIXTURES")[["event", "team_h", "team_a"]].apply(
-            pd.to_numeric, errors="coerce"
-        )
-    teams = teams.copy()
-    teams["id"] = pd.to_numeric(teams["id"], errors="coerce").astype(int)
-
-    manual_start_pct = reference.load_manual_start_pct()
-    if layers.priors:
-        # hand-entered priors for players with no PL history (data/priors.yaml)
-        model, prior_starts = priors.apply_priors(model, priors.load_priors(), DEFAULT_PARAMS.points)
-        for code, pct in prior_starts.items():
-            manual_start_pct[code] = pct
-
-    dcscore, dc_avg = reference.load_dcscore()
-    ppts = compute_ppts(
-        model=model,
-        team_strength=team_strength,
-        dcscore=dcscore,
-        dc_league_avg=dc_avg,
-        fixture_grid=opponent_grid(build_fixture_slots(fixtures, teams), gws=gws),
-        league_avg_xg=la_xg,
-        league_avg_xgc=la_xgc,
-        params=DEFAULT_PARAMS,
-        manual_start_pct=manual_start_pct,
-        fixture_adj=fixture_adj,
-    )
-    return Pipeline(ppts=ppts, model=model, team_form=form, boot=boot if refresh else None, style=style)
-
-
-def build_ppts(
-    refresh: bool = False, boot: dict | None = None, fixtures_raw: list[dict] | None = None,
-    use_inseason: bool = True,
-) -> pd.DataFrame:
-    return build_pipeline(refresh, boot, fixtures_raw, use_inseason).ppts
-
-
-def _prices(refresh: bool, boot: dict | None = None) -> pd.Series:
-    """Player price by code — live if refreshing, else the workbook snapshot."""
-    if refresh:
-        live = _live_players(boot)
-        return live.loc[live["status"] != "u", "price"]
-    ref = reference.load("API")
-    codes = pd.to_numeric(ref["code"], errors="coerce")
-    price = pd.to_numeric(ref["now_cost"], errors="coerce") / 10
-    mask = codes.notna() & price.notna()
-    return pd.Series(price[mask].values, index=codes[mask].astype(int).values)
-
-
-def _resolve_codes(names: list[str], players: pd.DataFrame) -> set[int]:
-    codes: set[int] = set()
-    for name in names:
-        hits = players[players["FPL_Name"].str.contains(name, case=False, na=False)]
-        if hits.empty:
-            raise SystemExit(f"no player matching {name!r}")
-        if len(hits) > 1:
-            raise SystemExit(f"{name!r} is ambiguous — matches: {', '.join(hits['FPL_Name'])}")
-        codes.add(int(hits.index[0]))
-    return codes
+from .optimizer import optimize_squad, select_pool
+from .scorers import scorer_table
 
 
 def cmd_predict(args: argparse.Namespace) -> None:
@@ -236,12 +84,12 @@ def cmd_squad(args: argparse.Namespace) -> None:
     xp = window.pivot_table(index="Code", columns="gw", values="TRUE TOTAL", aggfunc="sum")
 
     players = (
-        window.groupby("Code")[["FPL_Name", "TEAM", "POS"]].first().join(_prices(args.refresh).rename("price"))
+        window.groupby("Code")[["FPL_Name", "TEAM", "POS"]].first().join(player_prices(args.refresh).rename("price"))
     )
     players = players[players["price"].notna()]
 
-    locks = _resolve_codes(args.lock or [], players)
-    excludes = _resolve_codes(args.exclude or [], players)
+    locks = resolve_codes(args.lock or [], players)
+    excludes = resolve_codes(args.exclude or [], players)
     pool = select_pool(players, xp.sum(axis=1), keep=locks)
 
     solution = optimize_squad(
@@ -292,14 +140,14 @@ def cmd_team(args: argparse.Namespace) -> None:
         team_mod.remember_entry(entry_id)  # only once it resolved to a real team
     pipe = build_pipeline(refresh=True, boot=boot, use_inseason=not args.no_inseason)
     ppts = pipe.ppts
-    prices = _prices(True, boot)
+    prices = player_prices(True, boot)
     players_all = ppts.groupby("Code")[["FPL_Name"]].first()
     plan = plan_transfers(
         ppts, prices, my, to_gw=args.to_gw, bench_weight=args.bench_weight,
         free_transfers=args.ft, bank=args.bank, max_transfers=args.max_transfers,
         hit_cost=args.hit_cost, ft_value=args.ft_value, wildcard=args.wildcard,
-        locks=_resolve_codes(args.lock or [], players_all),
-        excludes=_resolve_codes(args.exclude or [], players_all),
+        locks=resolve_codes(args.lock or [], players_all),
+        excludes=resolve_codes(args.exclude or [], players_all),
     )
     explain.explain_plan(plan, pipe, prices, ft_value=args.ft_value)
     print_plan(plan)
@@ -364,39 +212,6 @@ def cmd_form(args: argparse.Namespace) -> None:
     print("Defence columns are goals conceded: below 1 is good.\n")
     cols = ["games", "xg", "exp_xg", "att_raw", "att_mult", "xgc", "exp_xgc", "def_raw", "def_mult"]
     print(f[cols].to_string(float_format=lambda x: f"{x:.2f}"))
-
-
-def scorer_table(ppts: pd.DataFrame, gw: int, team: str | None = None) -> pd.DataFrame:
-    """Anytime scorer / assist probabilities for one gameweek.
-
-    Poisson on the fixture's expected goals and FPL assists (already scaled
-    for opponent, venue tilt, positional channel and minutes): P = 1 - e^-x.
-    A double gameweek sums the expectations before converting.
-
-    Start probabilities are per-player estimates and don't know a team fields
-    exactly ten outfielders: a rebuilt squad can sum to 7, a deep one to 13.
-    For a probability table that has to reconcile with the team's goals, each
-    team's outfield expectations are rescaled toward ten starters (capped —
-    the points model itself is left alone).
-    """
-    rows = ppts[(ppts["gw"] == gw) & (ppts["VS"].astype(str).str.len() >= 3)].copy()
-    outfield = rows[rows["POS"] != "GK"]
-    n_fix = outfield.groupby("TEAM")["slot"].nunique()
-    scale = (10 * n_fix / outfield.groupby("TEAM")["Start %"].sum()).clip(0.8, 1.5)
-    k = rows["TEAM"].map(scale).fillna(1.0).where(rows["POS"] != "GK", 1.0)
-    rows["exp_goals"], rows["exp_assists"] = rows["exp_goals"] * k, rows["exp_assists"] * k
-    rows["Start %"] = (rows["Start %"] * k).clip(upper=0.98)
-    if team:
-        rows = rows[rows["TEAM"].str.upper() == team.upper()]
-    g = rows.groupby("Code").agg(
-        FPL_Name=("FPL_Name", "first"), TEAM=("TEAM", "first"), POS=("POS", "first"),
-        VS=("VS", "+".join), start=("Start %", "mean"),
-        xG=("exp_goals", "sum"), xA=("exp_assists", "sum"),
-    )
-    g["P(goal)"] = 1 - np.exp(-g["xG"])
-    g["P(assist)"] = 1 - np.exp(-g["xA"])
-    g["P(either)"] = 1 - np.exp(-(g["xG"] + g["xA"]))
-    return g
 
 
 def cmd_scorers(args: argparse.Namespace) -> None:
