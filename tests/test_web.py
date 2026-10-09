@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from fpl_model import web
+from fpl_model import payloads
 
 
 def test_predictions_payload_shape():
-    p = web.predictions_payload(1, 5, refresh=False, pos="MID", sort="pts", top=10)
+    p = payloads.predictions_payload(1, 5, refresh=False, pos="MID", sort="pts", top=10)
     rows = p["rows"]
     assert 0 < len(rows) <= 10
     assert all(r["POS"] == "MID" for r in rows)
@@ -18,18 +18,18 @@ def test_predictions_payload_shape():
 
 
 def test_player_payload_and_errors():
-    p = web.player_payload("Bukayo", 1, 5, refresh=False)
+    p = payloads.player_payload("Bukayo", 1, 5, refresh=False)
     assert "Saka" in p["name"]
     assert 1 <= len(p["rows"]) <= 5
     assert {"gw", "vs", "goals", "true_total"} <= set(p["rows"][0])
     with pytest.raises(ValueError, match="no player"):
-        web.player_payload("zzznotaplayer", 1, 5, refresh=False)
+        payloads.player_payload("zzznotaplayer", 1, 5, refresh=False)
     with pytest.raises(ValueError, match="ambiguous"):
-        web.player_payload("a", 1, 5, refresh=False)
+        payloads.player_payload("a", 1, 5, refresh=False)
 
 
 def test_verdict_payload():
-    v = web.verdict_payload("Bruno Borges", 1, 8, refresh=False)
+    v = payloads.verdict_payload("Bruno Borges", 1, 8, refresh=False)
     assert v["pos"] == "MID" and v["team"] == "MUN"
     assert v["rank"] >= 1 and v["pos_rank"] <= v["pos_count"]
     assert 0 <= v["start_pct"] <= 1
@@ -38,14 +38,14 @@ def test_verdict_payload():
     # a top pick should read as one
     assert any("elite" in s or "strong" in s for s in v["verdict"])
     # priors-backed player carries the low-confidence caveat
-    t = web.verdict_payload("Tzolis", 1, 8, refresh=False)
+    t = payloads.verdict_payload("Tzolis", 1, 8, refresh=False)
     assert any("priors.yaml" in s for s in t["verdict"])
     with pytest.raises(ValueError, match="ambiguous"):
-        web.verdict_payload("Pedro", 1, 8, refresh=False)
+        payloads.verdict_payload("Pedro", 1, 8, refresh=False)
 
 
 def test_compare_payload():
-    j = web.compare_payload("Calvert-Lewin", "Richarlison", 1, 8, refresh=False)
+    j = payloads.compare_payload("Calvert-Lewin", "Richarlison", 1, 8, refresh=False)
     assert j["a"]["name"].endswith("Calvert-Lewin")
     assert "Richarlison" in j["b"]["name"]
     assert j["same_pos"] is True
@@ -53,13 +53,13 @@ def test_compare_payload():
     assert j["xp_diff"] == pytest.approx(j["a"]["xp"] - j["b"]["xp"], abs=0.1)
     total_a = sum(r["a_xp"] for r in j["rows"])
     assert total_a == pytest.approx(j["a"]["xp"], abs=0.5)
-    cross = web.compare_payload("Bukayo", "Gabriel dos", 1, 8, refresh=False)
+    cross = payloads.compare_payload("Bukayo", "Gabriel dos", 1, 8, refresh=False)
     assert cross["same_pos"] is False
 
 
 @pytest.mark.slow
 def test_squad_payload_legal():
-    s = web.squad_payload(1, 3, refresh=False, bench_weight=0.1, locks=[], excludes=[])
+    s = payloads.squad_payload(1, 3, refresh=False, bench_weight=0.1, locks=[], excludes=[])
     assert s["status"] == "Optimal"
     assert len(s["squad"]) == 15
     assert len(s["xi"]) == 11
@@ -74,7 +74,7 @@ def test_plan_to_json_shape():
 
     players, xp = toy_players()
     p = plan_transfers(_fake_ppts(players, xp), players["price"], _fake_team(players), to_gw=2)
-    j = web.plan_to_json(p)
+    j = payloads.plan_to_json(p)
     assert j["from_gw"] == 1 and j["to_gw"] == 2
     assert len(j["current"]) == 15 and len(j["xi"]) == 11 and len(j["bench"]) == 4
     assert sum(r["captain"] for r in j["xi"]) == 1 and sum(r["vice"] for r in j["xi"]) == 1
@@ -87,7 +87,7 @@ def test_sandbox_tables_shape():
     from fpl_model.pipeline import build_pipeline, player_prices
 
     pipe = build_pipeline(refresh=False)
-    t = web.sandbox_tables(pipe.ppts, player_prices(False), 6, 10, boot=None, team_form=pipe.team_form)
+    t = payloads.sandbox_tables(pipe.ppts, player_prices(False), 6, 10, boot=None, team_form=pipe.team_form)
     assert t["gws"] == [6, 7, 8, 9, 10]
     assert len(t["players"]) > 400 and len(t["teams"]) == 20
     p = next(v for v in t["players"].values() if v["name"] == "James Tarkowski")
@@ -113,9 +113,9 @@ def test_track_record_from_backtest_table(tmp_path):
                          started=1.0, goals=0.0, assists=0.0, price=6.0, variant=variant, gw=1,
                          snapshot="2026-08-20"))
     pd.DataFrame(rows).to_parquet(tmp_path / "bt.parquet")
-    tr = web.track_record(None, path=tmp_path / "bt.parquet")
+    tr = payloads.track_record(None, path=tmp_path / "bt.parquet")
     assert list(tr) == [17761]
     r = tr[17761][0]
     assert r["gw"] == 1 and r["xp"] == 4.5 and r["xp_port"] == 3.9 and r["pts"] == 6
     assert r["started"] is True and r["snapshot"] == "2026-08-20"
-    assert web.track_record(None, path=tmp_path / "missing.parquet") == {}
+    assert payloads.track_record(None, path=tmp_path / "missing.parquet") == {}
