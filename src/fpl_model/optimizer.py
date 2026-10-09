@@ -235,3 +235,13 @@ def optimize_squad(
         transfers_out=transfers_out,
         hit_points=hit_points,
     )
+
+
+def formation(xi: pd.DataFrame) -> str:
+    """The XI's shape as "DEF-MID-FWD", e.g. "4-5-1", from its POS column."""
+    return "-".join(str((xi["POS"] == p).sum()) for p in ["DEF", "MID", "FWD"])
+
+
+def captains_by_gw(lineups: pd.DataFrame) -> pd.DataFrame:
+    """The captain row of each gameweek's lineup, in gameweek order."""
+    return lineups[lineups["captain"]].sort_values("gw")
