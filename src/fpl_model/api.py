@@ -16,22 +16,27 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from . import paths
+
 BASE = "https://fantasy.premierleague.com/api"
-SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "data" / "snapshots"
+SNAPSHOT_DIR = paths.SNAPSHOT_DIR
+TIMEOUT_S = 30
+# rate-limited or a server-side hiccup: worth a retry after a backoff
+RETRY_STATUSES = (429, 500, 502, 503)
 
 
 def _get(path: str, retries: int = 4) -> dict | list:
-    # transient TLS/connection drops from the FPL API killed the weekly
-    # launchd run (set -e), so retry connection-level failures too
+    # transient TLS/connection drops from the FPL API used to kill the weekly
+    # launchd run outright, so retry connection-level failures too
     for attempt in range(retries):
         try:
-            r = requests.get(f"{BASE}/{path}", timeout=30)
+            r = requests.get(f"{BASE}/{path}", timeout=TIMEOUT_S)
         except (requests.ConnectionError, requests.Timeout):
             if attempt == retries - 1:
                 raise
             time.sleep(2**attempt)
             continue
-        if r.status_code in (429, 500, 502, 503) and attempt < retries - 1:
+        if r.status_code in RETRY_STATUSES and attempt < retries - 1:
             time.sleep(2**attempt)
             continue
         r.raise_for_status()
@@ -45,7 +50,14 @@ def fetch_bootstrap() -> dict:
 
 
 def fetch_fixtures() -> list[dict]:
+    """Every fixture of the season: gameweek, home/away team ids, kick-off,
+    finished flag and (once played) the match stats."""
     return _get("fixtures/")
+
+
+def team_short_names(boot: dict) -> dict[int, str]:
+    """Bootstrap team id -> upper-case short name (the model's ABVR key)."""
+    return {int(t["id"]): str(t["short_name"]).upper() for t in boot["teams"]}
 
 
 def fetch_player_history(player_id: int) -> dict:

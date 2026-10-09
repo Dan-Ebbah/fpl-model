@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import datetime as dt
 
+import pytest
+
 from fpl_model import api
 
 
@@ -26,3 +28,13 @@ def test_snapshot_persists_prefetched_data(tmp_path):
 
     # same-day re-snapshot overwrites in place rather than duplicating
     assert api.snapshot(out_dir=tmp_path, bootstrap=bootstrap, fixtures=fixtures) == dest
+
+
+def test_failed_snapshot_leaves_no_folder(tmp_path, monkeypatch):
+    def boom():
+        raise ConnectionError("TLS EOF")
+
+    monkeypatch.setattr(api, "fetch_bootstrap", boom)
+    with pytest.raises(ConnectionError):
+        api.snapshot(out_dir=tmp_path)
+    assert list(tmp_path.iterdir()) == []
