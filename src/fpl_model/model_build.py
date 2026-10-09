@@ -13,25 +13,55 @@ reproduced, e.g. MATCH is case-insensitive and returns the first hit, the
 current-season YC rate skips the minutes-share factor the previous-season one
 applies, and a player whose Mn/Start is exactly 50 falls off the end of the
 TREND interpolation table and gets 0.
+
+`build_model` runs the sheet's sections in order — identity columns, FBRef
+playing time, season rates, pivot windows, scoring categories — each as a
+helper that appends its columns to the frame. Column order is part of the
+output, so the helpers run in that order and assign in the sheet's order.
 """
 
 from __future__ import annotations
 
 import math
+from functools import partial
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 
 from .config import PositionPoints
-
-ELEMENT_TYPE_POS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+from .rules import ELEMENT_TYPE_POS, MINUTES_PER_MATCH
 
 # CONTROL rows defining the pivot windows (C=offset, D=span, E=end offset)
 LF_WINDOW, SF_WINDOW = 56, 57
 LF_DC_WINDOW, SF_DC_WINDOW = 83, 84
+# CONTROL rows B13:C17 — the Mn/Start breakpoints (B) and drops (C) of the 60+ min TREND
+TREND_TABLE_ROWS = range(13, 18)
+
+# Values the sheet hard-codes inside its formulas, named here (unchanged).
+YELLOW_CARD_POINTS = -1
+RED_CARD_POINTS = -3
+SAVES_PER_POINT = 3
+# Defensive contribution pays at 10+ actions for a DEF and 12+ otherwise, so
+# P(DC >= threshold) = 1 - PoissonCDF(threshold - 1).
+DC_CDF_MAX_DEF = 9
+DC_CDF_MAX_OTHER = 11
+# minutes-per-match share assumed for a player with no starts / no sub appearances
+NO_HISTORY_START_SHARE = 0.66
+NO_HISTORY_SUB_SHARE = 0.2
+# squad-appearance probability: floor with no appearances, scale otherwise
+NO_APPEARANCES_PCT = 0.01
+APPEARANCE_SCALE = 0.99
+# 60+ minutes probability = base - TREND drop; previous vs current season bases
+TREND_BASE_PS = 0.98
+TREND_BASE_CURRENT = 0.99
+TREND_BELOW_TABLE_DROP = 0.5  # the drop used below the last breakpoint
+
+ControlValue = Callable[[str], float]
 
 
-def control_value(control: pd.Series, cell: str) -> float:
+def _control_value(control: pd.Series, cell: str) -> float:
+    """CONTROL cell `cell` (e.g. "B43") as a float; the extract stores values as text."""
     return float(control[cell])
 
 
@@ -94,10 +124,16 @@ def _pivot_window_sum(
 
 
 def _window(control: pd.Series, row: int) -> tuple[int, int]:
-    e2 = int(control_value(control, "E2"))
-    c = int(control_value(control, f"C{row}"))
-    d = int(control_value(control, f"D{row}"))
-    e = int(control_value(control, f"E{row}"))
+    """The (lo, hi) pivot-column window a CONTROL row defines.
+
+    E2 is the current gameweek column; row `row` holds C=offset back from it,
+    D=span and E=end offset, so the window is [E2 - D + 1 - C, E2 - E] in the
+    pivot block's 1-based column indices (as `_pivot_window_sum` expects).
+    """
+    e2 = int(_control_value(control, "E2"))
+    c = int(_control_value(control, f"C{row}"))
+    d = int(_control_value(control, f"D{row}"))
+    e = int(_control_value(control, f"E{row}"))
     return e2 - d + 1 - c, e2 - e
 
 
@@ -112,15 +148,13 @@ def _trend_interp(x: pd.Series, bx: list[float], by: list[float], base: float) -
         if pd.isna(v):
             v = 0.0
         if v < bx[-1]:
-            return base - 0.5
+            return base - TREND_BELOW_TABLE_DROP
         pos = None
         for i, b in enumerate(bx):
             if b >= v:
                 pos = i
         if pos is None or pos + 1 >= len(bx):
             # MATCH fails (x above all) or segment runs off the table: error -> 0
-            if pos is None:
-                return 0.0
             return 0.0
         x0, x1, y0, y1 = bx[pos], bx[pos + 1], by[pos], by[pos + 1]
         return base - (y0 + (y1 - y0) * (v - x0) / (x1 - x0))
@@ -129,6 +163,10 @@ def _trend_interp(x: pd.Series, bx: list[float], by: list[float], base: float) -
 
 
 def _poisson_cdf(k: pd.Series, lam: pd.Series) -> pd.Series:
+    """Excel POISSON.DIST(k, lam, TRUE) element-wise: P(X <= k) for X ~ Poisson(lam).
+
+    A NaN or negative rate is Excel's #NUM! and comes back as NaN.
+    """
     def one(kk: float, ll: float) -> float:
         if pd.isna(ll) or ll < 0:
             return np.nan
@@ -137,27 +175,27 @@ def _poisson_cdf(k: pd.Series, lam: pd.Series) -> pd.Series:
     return pd.Series([one(kk, ll) for kk, ll in zip(k, lam)], index=k.index)
 
 
-def build_model(
-    api: pd.DataFrame,
-    teams: pd.DataFrame,
-    psapi: pd.DataFrame,
-    pt: pd.DataFrame,
-    pspt: pd.DataFrame,
-    pivots: dict[str, pd.DataFrame],
-    team_strength: pd.DataFrame,
-    control: pd.Series,
-    points: PositionPoints,
-    name_map: pd.DataFrame,
+def _ps_col(m: pd.DataFrame, ps_by_code: pd.DataFrame, col: str) -> pd.Series:
+    """Previous-season PSAPI column `col` looked up by Code; 0 where the player has no row."""
+    return m["Code"].map(_num(ps_by_code[col])).fillna(0.0)
+
+
+def _api_col(api: pd.DataFrame, col: str) -> pd.Series:
+    """Current-season API column `col` as numbers, blanks -> 0."""
+    return _num(api[col]).fillna(0.0)
+
+
+def _per90(count: pd.Series, mins: pd.Series) -> pd.Series:
+    """count / mins * 90 with the sheet's IFERROR -> 0 (no minutes -> 0)."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r = (count / mins) * MINUTES_PER_MATCH
+    return r.replace([np.inf, -np.inf], 0).fillna(0.0)
+
+
+def _identity_columns(
+    m: pd.DataFrame, api: pd.DataFrame, teams: pd.DataFrame, name_map: pd.DataFrame
 ) -> pd.DataFrame:
-    """Rebuild the MODEL sheet rows (one per API player, API order).
-
-    `name_map` carries the sheet's manual columns keyed by Code: FBRef_Name,
-    "Alt Name 2", POS2 — name spellings used to match the FBRef tables. New
-    players absent from it fall back to "-" (no extra FBRef match), POS2=POS.
-    """
-    cv = lambda cell: control_value(control, cell)  # noqa: E731
-
-    m = pd.DataFrame(index=api.index)
+    """Code, names, position and team — the sheet's key columns."""
     m["Code"] = _num(api["code"]).astype(int)
     m["FPL_Name"] = api["first_name"].astype(str) + " " + api["second_name"].astype(str)
     m["web_name"] = api["web_name"].astype(str)
@@ -170,10 +208,13 @@ def build_model(
     team_ids = _num(teams["id"]).astype(int)
     short = dict(zip(team_ids, teams["short_name"]))
     m["TEAM"] = _num(api["team"]).map(short).fillna("-")
+    return m
 
+
+def _fbref_playing_time(m: pd.DataFrame, pt: pd.DataFrame, pspt: pd.DataFrame) -> pd.DataFrame:
+    """FBRef playing-time aggregates (PS = previous season via PSPT) and their shares."""
     names = [m["FPL_Name"], m["web_name"], m["FBRef_Name"], m["Alt Name 2"]]
 
-    # --- FBRef playing-time aggregates (PS = previous season via PSPT) ---
     for prefix, table in [("PS ", pspt), ("", pt)]:
         for out_col, src in [
             ("Starts", "Starts"), ("Subs", "Subs"), ("UnSub", "unSub"),
@@ -182,13 +223,19 @@ def build_model(
             m[prefix + out_col] = _dedup4(*_fbref_lookup(table, src, names))
 
     m["PS Mn/St %"] = np.where(
-        m["POS"] == "GK", 1.0, np.where(m["PS Starts"] == 0, 0.66, m["PS Mn/St"] / 90)
+        m["POS"] == "GK",
+        1.0,
+        np.where(m["PS Starts"] == 0, NO_HISTORY_START_SHARE, m["PS Mn/St"] / MINUTES_PER_MATCH),
     )
-    m["PS Mn/Sub %"] = np.where(m["PS Mn/Sub"] == 0, 0.2, m["PS Mn/Sub"] / 90)
+    m["PS Mn/Sub %"] = np.where(
+        m["PS Mn/Sub"] == 0, NO_HISTORY_SUB_SHARE, m["PS Mn/Sub"] / MINUTES_PER_MATCH
+    )
     m["Mn/St %"] = np.where(
-        m["POS"] == "GK", 1.0, np.where(m["Starts"] == 0, 0.66, m["Mn/St"] / 90)
+        m["POS"] == "GK",
+        1.0,
+        np.where(m["Starts"] == 0, NO_HISTORY_START_SHARE, m["Mn/St"] / MINUTES_PER_MATCH),
     )
-    m["Mn/Sub %"] = np.where(m["Mn/Sub"] == 0, 0.2, m["Mn/Sub"] / 90)
+    m["Mn/Sub %"] = np.where(m["Mn/Sub"] == 0, NO_HISTORY_SUB_SHARE, m["Mn/Sub"] / MINUTES_PER_MATCH)
 
     for prefix in ["PS ", ""]:
         squads = m[prefix + "Starts"] + m[prefix + "Subs"] + m[prefix + "UnSub"]
@@ -199,31 +246,28 @@ def build_model(
             m[prefix + "UnSub/SqdsMd"] = (
                 (m[prefix + "UnSub"] / squads).replace([np.inf, -np.inf], 0).fillna(0.0)
             )
-    # --- season-total rates from the API pulls (PS = frozen PSAPI) ---
+    return m
+
+
+def _season_rates(
+    m: pd.DataFrame, api: pd.DataFrame, psapi: pd.DataFrame, cv: ControlValue
+) -> pd.DataFrame:
+    """Season-total per-90 / per-start rates from the API pulls (PS = frozen PSAPI)."""
     ps_by_code = psapi.set_index(_num(psapi["code"]).astype(int))
-
-    def ps_col(col: str) -> pd.Series:
-        return m["Code"].map(_num(ps_by_code[col])).fillna(0.0)
-
-    def api_col(col: str) -> pd.Series:
-        return _num(api[col]).fillna(0.0)
-
-    def per90(count: pd.Series, mins: pd.Series) -> pd.Series:
-        with np.errstate(divide="ignore", invalid="ignore"):
-            r = (count / mins) * 90
-        return r.replace([np.inf, -np.inf], 0).fillna(0.0)
+    ps_col = partial(_ps_col, m, ps_by_code)
+    api_col = partial(_api_col, api)
 
     m["PS Mins"], m["Mins"] = ps_col("minutes"), api_col("minutes")
-    m["PS Saves/90"] = per90(ps_col("saves"), m["PS Mins"])
-    m["Saves/90"] = per90(api_col("saves"), m["Mins"])
-    m["PS YC/St"] = per90(ps_col("yellow_cards"), m["PS Mins"]) * m["PS Mn/St %"]
-    m["YC/90"] = per90(api_col("yellow_cards"), m["Mins"])  # sheet skips the Mn/St % factor here
-    m["PS RC/90"] = per90(ps_col("red_cards"), m["PS Mins"])
-    m["RC/90"] = per90(api_col("red_cards"), m["Mins"])
-    m["PS A/St"] = per90(ps_col("assists"), m["PS Mins"]) * m["PS Mn/St %"]
-    m["A/St"] = per90(api_col("assists"), m["Mins"]) * m["Mn/St %"]
-    m["PS xA/St"] = per90(ps_col("expected_assists"), m["PS Mins"]) * m["PS Mn/St %"]
-    m["xA/St"] = per90(api_col("expected_assists"), m["Mins"]) * m["Mn/St %"]
+    m["PS Saves/90"] = _per90(ps_col("saves"), m["PS Mins"])
+    m["Saves/90"] = _per90(api_col("saves"), m["Mins"])
+    m["PS YC/St"] = _per90(ps_col("yellow_cards"), m["PS Mins"]) * m["PS Mn/St %"]
+    m["YC/90"] = _per90(api_col("yellow_cards"), m["Mins"])  # sheet skips the Mn/St % factor here
+    m["PS RC/90"] = _per90(ps_col("red_cards"), m["PS Mins"])
+    m["RC/90"] = _per90(api_col("red_cards"), m["Mins"])
+    m["PS A/St"] = _per90(ps_col("assists"), m["PS Mins"]) * m["PS Mn/St %"]
+    m["A/St"] = _per90(api_col("assists"), m["Mins"]) * m["Mn/St %"]
+    m["PS xA/St"] = _per90(ps_col("expected_assists"), m["PS Mins"]) * m["PS Mn/St %"]
+    m["xA/St"] = _per90(api_col("expected_assists"), m["Mins"]) * m["Mn/St %"]
 
     # bonus / BPS per start
     ps_bps, bps = ps_col("bps"), api_col("bps")
@@ -251,8 +295,13 @@ def build_model(
     # minutes-share blends (PS weight B62, current weight B63)
     m["G+A PSxTS Mn/Start"] = m["PS Mn/St %"] * cv("B62") + cv("B63") * m["Mn/St %"]
     m["G+A PSxTS Mn/Sub"] = m["PS Mn/Sub %"] * cv("B62") + cv("B63") * m["Mn/Sub %"]
+    return m
 
-    # --- pivot windows: long-form / short-form xG, xA, minutes, DC ---
+
+def _pivot_windows(
+    m: pd.DataFrame, pivots: dict[str, pd.DataFrame], control: pd.Series, cv: ControlValue
+) -> pd.DataFrame:
+    """Long-form / short-form xG, xA, minutes and DC summed over the CONTROL windows."""
     codes = m["Code"]
     for tag, wrow in [("LF", LF_WINDOW), ("SF", SF_WINDOW)]:
         lo, hi = _window(control, wrow)
@@ -261,38 +310,49 @@ def build_model(
         xg_w = _pivot_window_sum(pivots["xG"], codes, lo, hi)
         m[f"{tag} G+A Mins" if tag == "LF" else "SF Mins"] = mins_w
         m[f"{tag} xA"], m[f"{tag} xG"] = xa_w, xg_w
-        m[f"{tag} xA/St"] = per90(xa_w, mins_w) * m["G+A PSxTS Mn/Start"]
-        m[f"{tag} xG/St"] = per90(xg_w, mins_w) * m["G+A PSxTS Mn/Start"]
+        m[f"{tag} xA/St"] = _per90(xa_w, mins_w) * m["G+A PSxTS Mn/Start"]
+        m[f"{tag} xG/St"] = _per90(xg_w, mins_w) * m["G+A PSxTS Mn/Start"]
 
     dc_blend = m["PS Mn/St %"] * cv("B89") + cv("B90") * m["Mn/St %"]
-    dc_threshold = np.where(m["POS"] == "DEF", 9, 11)
+    dc_threshold = np.where(m["POS"] == "DEF", DC_CDF_MAX_DEF, DC_CDF_MAX_OTHER)
     for tag, wrow in [("LF", LF_DC_WINDOW), ("SF", SF_DC_WINDOW)]:
         lo, hi = _window(control, wrow)
         dc_w = _pivot_window_sum(pivots["DC"], codes, lo, hi)
         dc_mins = _pivot_window_sum(pivots["MINS"], codes, lo, hi)
-        dc_per_start = per90(dc_w, dc_mins) * dc_blend
+        dc_per_start = _per90(dc_w, dc_mins) * dc_blend
         m[f"{tag} DC/St"] = dc_per_start
         m[f"{tag} DC %"] = 1 - _poisson_cdf(pd.Series(dc_threshold, index=m.index), dc_per_start)
+    return m
 
-    # --- scoring category columns "1".."11" ---
+
+def _category_columns(
+    m: pd.DataFrame, team_strength: pd.DataFrame, cv: ControlValue, points: PositionPoints
+) -> pd.DataFrame:
+    """Scoring category columns "1".."11" and TOTAL."""
     m["PS %1"] = np.where(
-        (m["PS Starts"] == 0) & (m["PS Subs"] == 0), 0.01, (1 - m["PS UnSub/SqdsMd"]) * 0.99
+        (m["PS Starts"] == 0) & (m["PS Subs"] == 0),
+        NO_APPEARANCES_PCT,
+        (1 - m["PS UnSub/SqdsMd"]) * APPEARANCE_SCALE,
     )
     m["%1"] = np.where(
-        (m["Starts"] == 0) & (m["Subs"] == 0), 0.01, (1 - m["UnSub/SqdsMd"]) * 0.99
+        (m["Starts"] == 0) & (m["Subs"] == 0),
+        NO_APPEARANCES_PCT,
+        (1 - m["UnSub/SqdsMd"]) * APPEARANCE_SCALE,
     )
-    m["1"] = (m["PS %1"] * cv("B8") + m["%1"] * cv("B9")) * 1.0 * m["Chance of Playing"]
+    m["1"] = (m["PS %1"] * cv("B8") + m["%1"] * cv("B9")) * m["Chance of Playing"]
 
-    bx = [cv(f"B{r}") for r in range(13, 18)]
-    by = [cv(f"C{r}") for r in range(13, 18)]
-    m["PS %2"] = _trend_interp(m["PS Mn/St"], bx, by, 0.98)
-    m["%2"] = _trend_interp(m["Mn/St"], bx, by, 0.99)
-    m["2"] = (m["PS %2"] * cv("B19") + cv("B20") * m["%2"]) * 1.0
+    bx = [cv(f"B{r}") for r in TREND_TABLE_ROWS]
+    by = [cv(f"C{r}") for r in TREND_TABLE_ROWS]
+    m["PS %2"] = _trend_interp(m["PS Mn/St"], bx, by, TREND_BASE_PS)
+    m["%2"] = _trend_interp(m["Mn/St"], bx, by, TREND_BASE_CURRENT)
+    m["2"] = m["PS %2"] * cv("B19") + cv("B20") * m["%2"]
 
     gk = (m["POS"] == "GK").astype(float)
-    m["3"] = (m["PS Saves/90"] / 3 * cv("B25") + cv("B26") * m["Saves/90"] / 3) * gk
-    m["4"] = (m["PS YC/St"] * cv("B31") + cv("B32") * m["YC/90"]) * -1
-    m["5"] = (m["PS RC/90"] * cv("B37") + cv("B38") * m["RC/90"]) * -3
+    m["3"] = (
+        m["PS Saves/90"] / SAVES_PER_POINT * cv("B25") + cv("B26") * m["Saves/90"] / SAVES_PER_POINT
+    ) * gk
+    m["4"] = (m["PS YC/St"] * cv("B31") + cv("B32") * m["YC/90"]) * YELLOW_CARD_POINTS
+    m["5"] = (m["PS RC/90"] * cv("B37") + cv("B38") * m["RC/90"]) * RED_CARD_POINTS
 
     ps_pct6 = np.where(
         m["PS Starts"] > cv("B46"),
@@ -304,7 +364,7 @@ def build_model(
         m["Bonus/Start"] * cv("B48") + cv("B49") * m["BPS/Start"] * cv("B45"),
         m["BPS/Start"] * cv("B45"),
     )
-    m["6"] = ps_pct6 * cv("B51") + cv("B52") * pct6 * 1.0
+    m["6"] = ps_pct6 * cv("B51") + cv("B52") * pct6
 
     m["7"] = (m["LF xA/St"] * cv("B59") + m["SF xA/St"] * cv("B60")) * points.assist
     m["Goal"] = m["POS"].map(points.goal).fillna(0.0)
@@ -330,4 +390,33 @@ def build_model(
     ).fillna(0.0)
 
     m["TOTAL"] = m[[str(i) for i in range(1, 12)]].sum(axis=1)
+    return m
+
+
+def build_model(
+    api: pd.DataFrame,
+    teams: pd.DataFrame,
+    psapi: pd.DataFrame,
+    pt: pd.DataFrame,
+    pspt: pd.DataFrame,
+    pivots: dict[str, pd.DataFrame],
+    team_strength: pd.DataFrame,
+    control: pd.Series,
+    points: PositionPoints,
+    name_map: pd.DataFrame,
+) -> pd.DataFrame:
+    """Rebuild the MODEL sheet rows (one per API player, API order).
+
+    `name_map` carries the sheet's manual columns keyed by Code: FBRef_Name,
+    "Alt Name 2", POS2 — name spellings used to match the FBRef tables. New
+    players absent from it fall back to "-" (no extra FBRef match), POS2=POS.
+    """
+    cv: ControlValue = partial(_control_value, control)
+
+    m = pd.DataFrame(index=api.index)
+    m = _identity_columns(m, api, teams, name_map)
+    m = _fbref_playing_time(m, pt, pspt)
+    m = _season_rates(m, api, psapi, cv)
+    m = _pivot_windows(m, pivots, control, cv)
+    m = _category_columns(m, team_strength, cv, points)
     return m

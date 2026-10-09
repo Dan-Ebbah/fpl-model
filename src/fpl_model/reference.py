@@ -8,21 +8,24 @@ ported model before the live-API data layer takes over.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
-REFERENCE_DIR = Path(__file__).resolve().parents[2] / "data" / "reference"
+from .paths import REFERENCE_DIR
 
 
 def load(sheet: str) -> pd.DataFrame:
+    """The frozen extract of workbook sheet `sheet` (data/reference/<sheet>.parquet), as text."""
     return pd.read_parquet(REFERENCE_DIR / f"{sheet}.parquet")
+
+
+def _numeric_code_rows(df: pd.DataFrame, col: str = "Code") -> pd.DataFrame:
+    """Rows whose `col` parses as a number — the sheet rows with a real player behind them."""
+    return df[pd.to_numeric(df[col], errors="coerce").notna()]
 
 
 def load_model() -> pd.DataFrame:
     """MODEL sheet rows with a real player behind them."""
-    m = load("MODEL")
-    m = m[pd.to_numeric(m["Code"], errors="coerce").notna()].copy()
+    m = _numeric_code_rows(load("MODEL")).copy()
     m["Code"] = m["Code"].astype(int)
     return m
 
@@ -52,7 +55,7 @@ def load_model_inputs() -> dict:
     """
     model = load_model()
     return {
-        "api": load("API")[pd.to_numeric(load("API")["code"], errors="coerce").notna()],
+        "api": _numeric_code_rows(load("API"), "code"),
         "teams": load("TEAMS"),
         "psapi": load("PSAPI"),
         "pt": load("PT"),
@@ -67,6 +70,10 @@ def load_model_inputs() -> dict:
 
 
 def load_dcscore() -> tuple[pd.DataFrame, pd.Series]:
+    """DCSCORE sheet: per-team defensive-contribution rates by position group, and the league-average row.
+
+    Threaded into compute_ppts for interface stability; the port does not use it.
+    """
     dc = load("DCSCORE").set_index("ABVR")
     avg = load("DCSCORE_league_avg").iloc[0]
     return dc, avg
@@ -91,8 +98,7 @@ def load_manual_start_pct() -> pd.Series:
 
 def load_reference_ppts() -> pd.DataFrame:
     """The workbook's own computed PPts rows (the parity target)."""
-    pp = load("PPts")
-    pp = pp[pd.to_numeric(pp["Code"], errors="coerce").notna()].copy()
+    pp = _numeric_code_rows(load("PPts")).copy()
     pp["Code"] = pp["Code"].astype(int)
     pp["GW"] = pp["GW"].astype(int)
     pp["GW2"] = pp["GW2"].astype(int)

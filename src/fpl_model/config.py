@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-POSITIONS = ("GK", "DEF", "MID", "FWD")
+from . import rules
+
+POSITIONS = rules.POSITIONS  # kept as a name here; the tuple now lives in rules
 
 
 @dataclass(frozen=True)
@@ -35,7 +37,13 @@ class PositionPoints:
 
 @dataclass(frozen=True)
 class ControlParams:
-    """Blend weights and multipliers (CONTROL sheet cells noted per field)."""
+    """Blend weights and multipliers (CONTROL sheet cells noted per field).
+
+    These are the cells PPts reads. `build_model` reads the rest of the CONTROL
+    sheet directly from the `CONTROL_values` extract — including B8/B9, which
+    it uses for the appearance blend ("1") independently of
+    `starts_rate_prev_season_weight` here, so the two can disagree.
+    """
 
     # FDR: long-form (38 GW) vs short-form (6 GW) opponent strength blend (B97/B98)
     fdr_long_form_weight: float = 0.8
