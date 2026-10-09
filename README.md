@@ -112,6 +112,8 @@ points → planning-window aggregation → squad optimization.
 ## Layout
 
 - `src/fpl_model/` — the package
+  - `payloads.py` — the web UI's JSON payload builders (web.py is just the HTTP layer over them)
+  - `report.py` — the terminal reports the CLI commands print (squad, team plan, style, backtest)
 - `data/reference/` — frozen values extracted from the workbook; parity fixtures
   for the tests and interim model inputs
 - `docs/formulas/` — the workbook's formulas (one JSON per sheet); the port spec

@@ -323,6 +323,38 @@ const $ = id => document.getElementById(id);
 const live = () => $('live').checked ? '1' : '0';
 let forcePull = false;
 
+/* ---------------- shared helpers ---------------- */
+const POS_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
+const fmt = (v, d = 1) => (v == null || isNaN(v)) ? '–' : Number(v).toFixed(d);
+const sgn = v => (v > 0 ? '+' : '') + fmt(v);
+const dcls = v => v > 0.05 ? 'pos' : v < -0.05 ? 'neg' : '';
+// a player name that opens the Player tab (wired by wirePlinks)
+const link = (name, cls='') => `<a href="#" class="plink ${cls}" data-name="${name}">${name}</a>`;
+function wirePlinks(el) {
+  el.querySelectorAll('a.plink').forEach(a => a.onclick = e => {
+    e.preventDefault(); openPlayer(a.dataset.name);
+  });
+}
+// "XI by position": one row per position, `label(row)` for each starter
+const xiRows = (xi, label) => POS_ORDER.map(p =>
+  `<div class="xi-row"><span class="pos">${p}</span>` +
+  xi.filter(r => r.POS === p).map(label).join(', ') + '</div>').join('');
+// "Captain by gameweek"
+const capRows = caps => caps.map(c =>
+  `<div class="xi-row"><span class="pos">GW${c.gw}</span>${link(c.FPL_Name)} <span class="muted">(${c.TEAM})</span></div>`).join('');
+// the headline stats of a verdict payload (the Player tab adds the positional rank)
+const playerStats = (v, withPosRank = false) => `
+    <div class="stat"><b>${v.name}</b><span>${v.team} · ${v.pos} · £${v.price.toFixed(1)}m</span></div>
+    <div class="stat"><b>${v.xp.toFixed(1)}</b><span>xP GW${v.window[0]}–${v.window[1]}</span></div>
+    <div class="stat"><b>#${v.rank}</b><span>overall</span></div>` +
+    (withPosRank ? `
+    <div class="stat"><b>#${v.pos_rank}<span class="muted">/${v.pos_count}</span></b><span>${v.pos}s</span></div>` : '') + `
+    <div class="stat"><b>${(v.start_pct*100).toFixed(0)}%</b><span>start prob.</span></div>`;
+// the entry id is remembered in this browser; storage may be unavailable (private mode)
+const ENTRY_KEY = 'fpl-entry';
+const rememberedEntry = () => { try { return localStorage.getItem(ENTRY_KEY) || ''; } catch (e) { return ''; } };
+const rememberEntry = v => { try { if (v) localStorage.setItem(ENTRY_KEY, v); } catch (e) {} };
+
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
   ['team','sandbox','squad','predict','player','compare'].forEach(t => $('tab-'+t).hidden = t !== b.dataset.tab);
@@ -356,9 +388,7 @@ function renderTable(el, rows, cols) {
       if (c.vs) v = `<a href="#" class="vslink" data-name="${r[c.vs]}">vs…</a>`;
       return `<td class="${num(r[c.k]) ? 'num' : ''}">${v ?? ''}</td>`;
     }).join('') + '</tr>').join('');
-  el.querySelectorAll('a.plink').forEach(a => a.onclick = e => {
-    e.preventDefault(); openPlayer(a.dataset.name);
-  });
+  wirePlinks(el);
   el.querySelectorAll('a.vslink').forEach(a => a.onclick = e => {
     e.preventDefault(); openCompare(a.dataset.name);
   });
@@ -381,19 +411,15 @@ function openCompare(name) {
 
 function sideCard(v) {
   return `
-    <div class="summary">
-      <div class="stat"><b>${v.name}</b><span>${v.team} · ${v.pos} · £${v.price.toFixed(1)}m</span></div>
-      <div class="stat"><b>${v.xp.toFixed(1)}</b><span>xP GW${v.window[0]}–${v.window[1]}</span></div>
-      <div class="stat"><b>#${v.rank}</b><span>overall</span></div>
-      <div class="stat"><b>${(v.start_pct*100).toFixed(0)}%</b><span>start prob.</span></div>
+    <div class="summary">${playerStats(v)}
     </div>` + v.verdict.map(s => `<div class="say">${s}</div>`).join('');
 }
 
-try { $('tm-entry').value = localStorage.getItem('fpl-entry') || ''; } catch (e) {}
+$('tm-entry').value = $('sb-entry').value = rememberedEntry();
 
 $('tm-run').onclick = async () => {
   const entry = $('tm-entry').value.trim();
-  try { if (entry) localStorage.setItem('fpl-entry', entry); } catch (e) {}
+  rememberEntry(entry);
   const j = await call('/api/team', {
     entry, to: $('tm-to').value, max_transfers: $('tm-max').value, ft: $('tm-ft').value,
     bank: $('tm-bank').value, hit_cost: $('tm-hit').value, ft_value: $('tm-ftv').value, bench_weight: $('tm-bw').value,
@@ -401,7 +427,6 @@ $('tm-run').onclick = async () => {
   }, $('tm-status'), $('tm-run'));
   if (!j) return;
   $('tm-out').hidden = false;
-  const link = (name, cls='') => `<a href="#" class="plink ${cls}" data-name="${name}">${name}</a>`;
   const rank = j.overall_rank ? j.overall_rank.toLocaleString() : 'n/a';
   $('tm-head').innerHTML = `<b>${j.team_name}</b> (${j.manager}, entry ${j.entry}) — ${j.total_points ?? '?'} pts, `
     + `overall rank ${rank}. Squad as locked for GW${j.gw}; planning GW${j.from_gw}–${j.to_gw}.`;
@@ -425,18 +450,12 @@ $('tm-run').onclick = async () => {
   $('tm-gain').textContent = (j.gain >= 0 ? '+' : '') + j.gain.toFixed(1);
   $('tm-bank-after').textContent = j.bank_after.toFixed(1);
   $('tm-xi-title').textContent = `GW${j.from_gw} XI (${j.formation}, ${j.xi_xp.toFixed(1)} xP)`;
-  $('tm-xi').innerHTML = ['GK','DEF','MID','FWD'].map(p =>
-    `<div class="xi-row"><span class="pos">${p}</span>` +
-    j.xi.filter(r => r.POS === p).map(r =>
-      link(r.FPL_Name, r.captain ? 'cap' : '') + (r.captain ? ' (C)' : r.vice ? ' (V)' : '')
-      + ` <span class="muted">${r.xp.toFixed(1)}</span>`
-    ).join(', ') + '</div>').join('');
+  $('tm-xi').innerHTML = xiRows(j.xi, r =>
+    link(r.FPL_Name, r.captain ? 'cap' : '') + (r.captain ? ' (C)' : r.vice ? ' (V)' : '')
+    + ` <span class="muted">${r.xp.toFixed(1)}</span>`);
   $('tm-bench').innerHTML = j.bench.map((r, i) => `${i+1}. ${link(r.FPL_Name)} <span class="muted">${r.xp.toFixed(1)}</span>`).join(', ');
-  $('tm-caps').innerHTML = j.captains.map(c =>
-    `<div class="xi-row"><span class="pos">GW${c.gw}</span>${link(c.FPL_Name)} <span class="muted">(${c.TEAM})</span></div>`).join('');
-  $('tm-out').querySelectorAll('a.plink').forEach(a => a.onclick = e => {
-    e.preventDefault(); openPlayer(a.dataset.name);
-  });
+  $('tm-caps').innerHTML = capRows(j.captains);
+  wirePlinks($('tm-out'));
   $('tm-out').querySelectorAll('a.vslink').forEach(a => a.onclick = e => {
     e.preventDefault();
     document.querySelector('nav button[data-tab="compare"]').click();
@@ -463,19 +482,11 @@ $('sq-run').onclick = async () => {
   $('sq-cost').textContent = j.cost.toFixed(1);
   $('sq-form').textContent = j.formation;
   $('sq-xi-title').textContent = 'GW' + $('sq-from').value + ' XI';
-  const link = (name, cls='') =>
-    `<a href="#" class="plink ${cls}" data-name="${name}">${name}</a>`;
-  $('sq-xi').innerHTML = ['GK','DEF','MID','FWD'].map(p =>
-    `<div class="xi-row"><span class="pos">${p}</span>` +
-    j.xi.filter(r => r.POS === p).map(r =>
-      link(r.FPL_Name, r.captain ? 'cap' : '') + (r.captain ? ' (C)' : '')
-    ).join(', ') + '</div>').join('');
+  $('sq-xi').innerHTML = xiRows(j.xi, r =>
+    link(r.FPL_Name, r.captain ? 'cap' : '') + (r.captain ? ' (C)' : ''));
   $('sq-bench').innerHTML = j.bench.map(n => link(n)).join(', ');
-  $('sq-caps').innerHTML = j.captains.map(c =>
-    `<div class="xi-row"><span class="pos">GW${c.gw}</span>${link(c.FPL_Name)} <span class="muted">(${c.TEAM})</span></div>`).join('');
-  $('sq-out').querySelectorAll('a.plink').forEach(a => a.onclick = e => {
-    e.preventDefault(); openPlayer(a.dataset.name);
-  });
+  $('sq-caps').innerHTML = capRows(j.captains);
+  wirePlinks($('sq-out'));
   renderTable($('sq-table'), j.squad, [
     {k:'FPL_Name',h:'player',click:true},{k:'TEAM',h:'team'},{k:'POS',h:'pos'},
     {k:'price',h:'£',d:1},{k:'window_xp',h:'window xP',d:1},
@@ -506,12 +517,7 @@ $('pl-run').onclick = async () => {
   if (!v || !j) { $('pl-verdict').hidden = true; $('pl-table').innerHTML = ''; return; }
   $('pl-verdict').hidden = false;
   $('pl-status').textContent = '';
-  $('pl-head').innerHTML = `
-    <div class="stat"><b>${v.name}</b><span>${v.team} · ${v.pos} · £${v.price.toFixed(1)}m</span></div>
-    <div class="stat"><b>${v.xp.toFixed(1)}</b><span>xP GW${v.window[0]}–${v.window[1]}</span></div>
-    <div class="stat"><b>#${v.rank}</b><span>overall</span></div>
-    <div class="stat"><b>#${v.pos_rank}<span class="muted">/${v.pos_count}</span></b><span>${v.pos}s</span></div>
-    <div class="stat"><b>${(v.start_pct*100).toFixed(0)}%</b><span>start prob.</span></div>`;
+  $('pl-head').innerHTML = playerStats(v, true);
   $('pl-say').innerHTML = v.verdict.map(s => `<div class="say">${s}</div>`).join('');
   $('pl-fix').innerHTML = v.fixtures.map(f =>
     `<span class="fix">GW${f.gw} ${f.vs} <b>${f.xp.toFixed(1)}</b></span>`).join(' ');
@@ -575,18 +581,12 @@ function trackRecord(past) {
 
 /* ---------------- Sandbox ---------------- */
 const SB = { d: null, build: [], sel: null, gwView: null, afford: true, q: '' };
-const POS_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
 const FORMATIONS = [];
 for (const d of [3,4,5]) for (const m of [2,3,4,5]) for (const f of [1,2,3]) if (d+m+f === 10) FORMATIONS.push([d,m,f]);
-
-try { $('sb-entry').value = localStorage.getItem('fpl-entry') || ''; } catch (e) {}
 
 const sbP = code => SB.d.players[code];
 const sbOrig = () => SB.d.squad.map(p => p.code);
 const sbCost = code => { const o = SB.d.squad.find(p => p.code === code); return o ? o.sell : sbP(code).price; };
-const fmt = (v, d = 1) => (v == null || isNaN(v)) ? '–' : Number(v).toFixed(d);
-const sgn = v => (v > 0 ? '+' : '') + fmt(v);
-const dcls = v => v > 0.05 ? 'pos' : v < -0.05 ? 'neg' : '';
 const short = code => sbP(code)?.web || sbP(code)?.name.split(' ').pop() || '?';
 
 function sbGwXp(code, gw) { return sbP(code)?.gw[gw]?.xp ?? 0; }
@@ -642,7 +642,7 @@ function sbWarnings(codes) {
 
 $('sb-run').onclick = async () => {
   const entry = $('sb-entry').value.trim();
-  try { if (entry) localStorage.setItem('fpl-entry', entry); } catch (e) {}
+  rememberEntry(entry);
   $('live').checked = true;
   const j = await call('/api/sandbox', { entry, to: $('sb-to').value }, $('sb-status'), $('sb-run'));
   if (!j) return;
@@ -703,24 +703,19 @@ function sbBars(items, maxAbs) {
   return items.map(([k, v]) => `<div class="bar"><span>${k}</span><i class="${v < 0 ? 'neg' : ''}" style="width:${Math.min(100, 100 * Math.abs(v) / m)}%;max-width:160px"></i><em>${fmt(v)}</em></div>`).join('');
 }
 
-function sbRenderDetail(ev) {
-  const el = $('sb-detail');
-  if (SB.sel == null || !sbP(SB.sel)) { el.innerHTML = '<span class="muted">Click a player on the left.</span>'; return; }
-  const c = SB.sel, p = sbP(c), d = SB.d, a = p.actual || {}, t = d.teams[p.team] || {}, f = t.form;
-  const isNew = !sbOrig().includes(c);
-  const per90 = (v) => a.mins ? fmt(90 * v / a.mins, 2) : '–';
-  const status = p.status === 'a' || !p.status ? '' : `<span class="chip ${p.chance < 0.5 ? 'err' : 'warn'}">${Math.round(p.chance * 100)}% · ${p.news}</span>`;
-  const sp = p.setpiece || {};
-  const spChips = [['pen', sp.pen], ['FK', sp.fk], ['CK', sp.ck]].filter(([, v]) => v).map(([k, v]) => `<span class="chip ${v === 1 ? 'ok' : ''}">${k} #${v}</span>`).join('');
-  const startsIn = ev.per.filter(g => g.xi.has(c)).length;
-
-  const cats = Object.entries(p.cats).map(([k, v]) => [k, v]);
-  const fx = d.gws.map(gw => {
-    const g = p.gw[gw];
-    return `<tr><td>GW${gw}</td><td>${g ? g.vs.join(' + ') : '<span class="muted">blank</span>'}</td><td class="num">${g ? fmt(g.xp) : '–'}</td><td class="num">${g ? Math.round(g.start * 100) + '%' : '–'}</td><td class="num">${g ? fmt(g.xg, 2) : '–'}</td><td class="num">${g ? fmt(g.xa, 2) : '–'}</td><td class="num">${g ? Math.round(g.cs * 100) + '%' : '–'}</td><td>${ev.per.find(x => x.gw === gw)?.xi.has(c) ? (ev.per.find(x => x.gw === gw).cap === c ? '<b class="cap">C</b>' : '✓') : '<span class="muted">bench</span>'}</td></tr>`;
+// Detail panel pieces: the selected player's per-GW fixtures, his season
+// actuals, his club's form block and the swap-candidate rows.
+function fixtureRows(p, ev, c) {
+  return SB.d.gws.map(gw => {
+    const g = p.gw[gw], per = ev.per.find(x => x.gw === gw);
+    return `<tr><td>GW${gw}</td><td>${g ? g.vs.join(' + ') : '<span class="muted">blank</span>'}</td><td class="num">${g ? fmt(g.xp) : '–'}</td><td class="num">${g ? Math.round(g.start * 100) + '%' : '–'}</td><td class="num">${g ? fmt(g.xg, 2) : '–'}</td><td class="num">${g ? fmt(g.xa, 2) : '–'}</td><td class="num">${g ? Math.round(g.cs * 100) + '%' : '–'}</td><td>${per?.xi.has(c) ? (per.cap === c ? '<b class="cap">C</b>' : '✓') : '<span class="muted">bench</span>'}</td></tr>`;
   }).join('');
+}
 
-  const actual = p.actual ? `
+function actualBlock(p) {
+  const a = p.actual || {};
+  const per90 = (v) => a.mins ? fmt(90 * v / a.mins, 2) : '–';
+  return p.actual ? `
     <h3>This season (actual)</h3>
     <div class="kv">
       <div><b>${a.pts ?? '–'}</b><span>points</span></div>
@@ -740,8 +735,11 @@ function sbRenderDetail(ev) {
       <div><b>${a.ict ?? '–'}</b><span>ICT</span></div>
       <div><b>${(a.tin ?? 0).toLocaleString()} / ${(a.tout ?? 0).toLocaleString()}</b><span>in / out this GW</span></div>
     </div>` : '<div class="muted">Actual stats need live data.</div>';
+}
 
-  const team = `
+function teamBlock(p) {
+  const d = SB.d, t = d.teams[p.team] || {}, f = t.form;
+  return `
     <h3>${t.name || p.team}</h3>
     ${f ? `<div class="kv">
       <div><b class="delta ${dcls(f.att_mult - 1)}">×${fmt(f.att_mult, 2)}</b><span>attack mult</span></div>
@@ -751,16 +749,17 @@ function sbRenderDetail(ev) {
     </div>` : ''}
     ${t.actual && t.actual.played ? `<div class="muted" style="font-size:12px">P${t.actual.played} W${t.actual.win} D${t.actual.draw} L${t.actual.loss} · ${t.actual.points} pts · ${t.actual.position}th</div>` : ''}
     <div style="margin-top:6px">${d.gws.map(gw => `<span class="fix">GW${gw} <b>${(t.fixtures?.[gw] || ['–']).join('+')}</b></span>`).join('')}</div>`;
+}
 
-  // swap candidates
-  const outCost = isNew ? p.price : sbCost(c);
-  const budget = sbFinance(SB.build).bank + outCost;
+// Same-position players not in the build, best xP first (top 40); the search
+// box overrides the affordability filter.
+function swapRows(p, budget) {
   const q = SB.q.toLowerCase();
-  let cands = Object.values(d.players).filter(x => x.pos === p.pos && !SB.build.includes(x.code));
+  let cands = Object.values(SB.d.players).filter(x => x.pos === p.pos && !SB.build.includes(x.code));
   if (q) cands = cands.filter(x => x.name.toLowerCase().includes(q) || x.team.toLowerCase().includes(q));
   else if (SB.afford) cands = cands.filter(x => x.price <= budget + 1e-9);
   cands.sort((x, y) => y.xp - x.xp);
-  const rows = cands.slice(0, 40).map(x => {
+  return cands.slice(0, 40).map(x => {
     const ok = x.price <= budget + 1e-9, delta = x.xp - p.xp, ax = x.actual || {};
     return `<tr data-code="${x.code}" class="${ok ? '' : 'no'}" title="${ok ? 'click to swap in' : 'over budget'}">
       <td>${x.web || x.name}${x.status && x.status !== 'a' ? ' <span class="chip warn">' + Math.round(x.chance * 100) + '%</span>' : ''}</td>
@@ -770,31 +769,12 @@ function sbRenderDetail(ev) {
       <td class="num">${ax.pts ?? ''}</td><td class="num">${ax.mins ?? ''}</td><td class="num">${fmt(ax.xgi, 1)}</td><td class="num">${ax.form ?? ''}</td>
     </tr>`;
   }).join('');
+}
 
-  el.innerHTML = `
-    <h2>${p.name}</h2>
-    <div style="margin-bottom:6px"><span class="chip">${p.team}</span><span class="chip">${p.pos}</span><span class="chip">£${fmt(p.price)}m${!isNew && sbCost(c) !== p.price ? ' · sells £' + fmt(sbCost(c)) + 'm' : ''}</span>${isNew ? '<span class="chip ok">swapped in</span>' : ''}${status}${spChips}</div>
-    <div class="kv">
-      <div><b>${fmt(p.xp)}</b><span>xP GW${d.from_gw}–${d.to_gw}</span></div>
-      <div><b>${fmt(p.xp_if_start)}</b><span>if he starts every GW</span></div>
-      <div><b>${Math.round(p.start * 100)}%</b><span>model start chance</span></div>
-      <div><b>${startsIn}/${d.gws.length}</b><span>in your XI</span></div>
-      ${p.past ? `<div><b>${fmt(p.past.reduce((s, r) => s + r.xp, 0))} <small class="muted">→</small> ${p.past.reduce((s, r) => s + r.pts, 0)}</b><span>said / got, GW${p.past[0].gw}–${p.past[p.past.length - 1].gw}</span></div>` : ''}
-    </div>
-    <h3>Where the xP comes from</h3>${sbBars(cats)}
-    <h3>Gameweek by gameweek</h3>
-    <div class="scroll"><table><tr><th>GW</th><th>vs</th><th class="num">xP</th><th class="num">start</th><th class="num">xG</th><th class="num">xA</th><th class="num">CS</th><th>XI</th></tr>${fx}</table></div>
-    <h3>Track record: what the model said before each deadline</h3>
-    ${trackRecord(p.past)}
-    ${actual}
-    ${team}
-    <div class="swap-head"><h3 style="margin:0">Swap for a ${p.pos}</h3>
-      <input type="text" class="wide" id="sb-q" placeholder="search name or team" value="${SB.q}">
-      <label style="display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)"><input type="checkbox" id="sb-afford" style="width:auto" ${SB.afford ? 'checked' : ''}> affordable only (≤ £${fmt(budget)}m)</label>
-      ${isNew ? `<button class="go" id="sb-undo">Undo this swap</button>` : ''}
-    </div>
-    <div class="scroll"><table class="swap"><tr><th>player</th><th></th><th class="num">£</th><th class="num">xP</th><th class="num">Δ</th><th class="num">start</th><th class="num">pts</th><th class="num">mins</th><th class="num">xGI</th><th class="num">form</th></tr>${rows}</table></div>`;
-
+// Click handlers on the freshly rendered detail panel: swap rows, the search
+// box (re-rendered on every keystroke, caret preserved), the affordability
+// toggle and the undo button.
+function wireDetail(el, ev, c, p) {
   el.querySelectorAll('table.swap tr[data-code]').forEach(tr => tr.onclick = () => {
     const i = SB.build.indexOf(c); SB.build[i] = +tr.dataset.code; SB.sel = +tr.dataset.code; SB.q = ''; sbRender();
     $('sb-detail').scrollTop = 0;
@@ -808,6 +788,45 @@ function sbRenderDetail(ev) {
     const back = sbOrig().find(o => !SB.build.includes(o) && sbP(o)?.pos === p.pos) ?? sbOrig().find(o => !SB.build.includes(o));
     if (back != null) { SB.build[i] = back; SB.sel = back; sbRender(); }
   };
+}
+
+function sbRenderDetail(ev) {
+  const el = $('sb-detail');
+  if (SB.sel == null || !sbP(SB.sel)) { el.innerHTML = '<span class="muted">Click a player on the left.</span>'; return; }
+  const c = SB.sel, p = sbP(c), d = SB.d;
+  const isNew = !sbOrig().includes(c);
+  const status = p.status === 'a' || !p.status ? '' : `<span class="chip ${p.chance < 0.5 ? 'err' : 'warn'}">${Math.round(p.chance * 100)}% · ${p.news}</span>`;
+  const sp = p.setpiece || {};
+  const spChips = [['pen', sp.pen], ['FK', sp.fk], ['CK', sp.ck]].filter(([, v]) => v).map(([k, v]) => `<span class="chip ${v === 1 ? 'ok' : ''}">${k} #${v}</span>`).join('');
+  const startsIn = ev.per.filter(g => g.xi.has(c)).length;
+  const outCost = isNew ? p.price : sbCost(c);
+  const budget = sbFinance(SB.build).bank + outCost;
+
+  el.innerHTML = `
+    <h2>${p.name}</h2>
+    <div style="margin-bottom:6px"><span class="chip">${p.team}</span><span class="chip">${p.pos}</span><span class="chip">£${fmt(p.price)}m${!isNew && sbCost(c) !== p.price ? ' · sells £' + fmt(sbCost(c)) + 'm' : ''}</span>${isNew ? '<span class="chip ok">swapped in</span>' : ''}${status}${spChips}</div>
+    <div class="kv">
+      <div><b>${fmt(p.xp)}</b><span>xP GW${d.from_gw}–${d.to_gw}</span></div>
+      <div><b>${fmt(p.xp_if_start)}</b><span>if he starts every GW</span></div>
+      <div><b>${Math.round(p.start * 100)}%</b><span>model start chance</span></div>
+      <div><b>${startsIn}/${d.gws.length}</b><span>in your XI</span></div>
+      ${p.past ? `<div><b>${fmt(p.past.reduce((s, r) => s + r.xp, 0))} <small class="muted">→</small> ${p.past.reduce((s, r) => s + r.pts, 0)}</b><span>said / got, GW${p.past[0].gw}–${p.past[p.past.length - 1].gw}</span></div>` : ''}
+    </div>
+    <h3>Where the xP comes from</h3>${sbBars(Object.entries(p.cats))}
+    <h3>Gameweek by gameweek</h3>
+    <div class="scroll"><table><tr><th>GW</th><th>vs</th><th class="num">xP</th><th class="num">start</th><th class="num">xG</th><th class="num">xA</th><th class="num">CS</th><th>XI</th></tr>${fixtureRows(p, ev, c)}</table></div>
+    <h3>Track record: what the model said before each deadline</h3>
+    ${trackRecord(p.past)}
+    ${actualBlock(p)}
+    ${teamBlock(p)}
+    <div class="swap-head"><h3 style="margin:0">Swap for a ${p.pos}</h3>
+      <input type="text" class="wide" id="sb-q" placeholder="search name or team" value="${SB.q}">
+      <label style="display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)"><input type="checkbox" id="sb-afford" style="width:auto" ${SB.afford ? 'checked' : ''}> affordable only (≤ £${fmt(budget)}m)</label>
+      ${isNew ? `<button class="go" id="sb-undo">Undo this swap</button>` : ''}
+    </div>
+    <div class="scroll"><table class="swap"><tr><th>player</th><th></th><th class="num">£</th><th class="num">xP</th><th class="num">Δ</th><th class="num">start</th><th class="num">pts</th><th class="num">mins</th><th class="num">xGI</th><th class="num">form</th></tr>${swapRows(p, budget)}</table></div>`;
+
+  wireDetail(el, ev, c, p);
 }
 
 function sbRenderTeams() {
