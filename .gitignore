@@ -9,3 +9,4 @@ data/archive/
 # your own FPL entry id (fpl team --entry)
 data/me.json
 /infra/bootstrap/.terraform/
+data/weekly.log

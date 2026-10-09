@@ -81,3 +81,41 @@ def test_plan_to_json_shape():
     assert j["gain"] == pytest.approx(j["proposal_xp"] - j["hit_points"] - j["baseline_xp"], abs=0.1)
     assert {"out", "in", "in_price", "out_sell", "xp_gain"} <= set(j["transfers"][0]) if j["transfers"] else True
     assert isinstance(j["chips_available"], list) and j["formation"].count("-") == 2
+
+
+def test_sandbox_tables_shape():
+    from fpl_model.cli import _prices, build_pipeline
+
+    pipe = build_pipeline(refresh=False)
+    t = web.sandbox_tables(pipe.ppts, _prices(False), 6, 10, boot=None, team_form=pipe.team_form)
+    assert t["gws"] == [6, 7, 8, 9, 10]
+    assert len(t["players"]) > 400 and len(t["teams"]) == 20
+    p = next(v for v in t["players"].values() if v["name"] == "James Tarkowski")
+    assert p["pos"] == "DEF" and p["team"] == "EVE" and p["price"] > 0
+    # window xP is the sum of the per-GW entries
+    assert p["xp"] == pytest.approx(sum(g["xp"] for g in p["gw"].values()), abs=0.05)
+    assert set(p["gw"]) <= {"6", "7", "8", "9", "10"}
+    assert {"goals", "assists", "cs", "conceded", "dc", "bonus"} == set(p["cats"])
+    assert "actual" not in p  # no bootstrap given
+    # team fixtures agree with the player's own
+    assert all(set(g["vs"]) <= set(t["teams"]["EVE"]["fixtures"][gw]) for gw, g in p["gw"].items())
+    if pipe.team_form is not None:
+        assert "att_mult" in t["teams"]["EVE"]["form"]
+
+
+def test_track_record_from_backtest_table(tmp_path):
+    import pandas as pd
+
+    rows = []
+    for variant, xp in [("all", 4.5), ("port", 3.9)]:
+        rows.append(dict(Code=17761, FPL_Name="James Tarkowski", TEAM="EVE", POS="DEF", xp=xp,
+                         start_pct=1.0, exp_goals=0.08, exp_assists=0.1, points=6.0, minutes=90.0,
+                         started=1.0, goals=0.0, assists=0.0, price=6.0, variant=variant, gw=1,
+                         snapshot="2026-08-20"))
+    pd.DataFrame(rows).to_parquet(tmp_path / "bt.parquet")
+    tr = web.track_record(None, path=tmp_path / "bt.parquet")
+    assert list(tr) == [17761]
+    r = tr[17761][0]
+    assert r["gw"] == 1 and r["xp"] == 4.5 and r["xp_port"] == 3.9 and r["pts"] == 6
+    assert r["started"] is True and r["snapshot"] == "2026-08-20"
+    assert web.track_record(None, path=tmp_path / "missing.parquet") == {}

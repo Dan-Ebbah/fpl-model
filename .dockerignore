@@ -1,0 +1,11 @@
+.venv/
+.git/
+data/snapshots/
+data/archive/
+data/me.json
+__pycache__/
+.pytest_cache/
+infra/
+.idea/
+docs/
+tests/

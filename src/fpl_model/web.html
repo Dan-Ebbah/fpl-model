@@ -77,6 +77,67 @@
   a.vslink:hover { color: var(--accent); }
   .cmp-side { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
   .cmp-side .say { background: var(--panel); }
+  /* sandbox */
+  .sb-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .sb-layout { grid-template-columns: 1fr; } }
+  .pitch { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .pitch h4 { margin: 8px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .cards { display: flex; flex-wrap: wrap; gap: 8px; }
+  .card {
+    flex: 1 1 150px; max-width: 220px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 7px; padding: 8px 10px; cursor: pointer; position: relative; min-width: 140px;
+  }
+  .card:hover { border-color: var(--muted); }
+  .card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card.bench { opacity: .6; }
+  .card.new { border-left: 3px solid var(--accent); }
+  .card.flag { border-left: 3px solid var(--warn); }
+  .card .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .sub { color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; }
+  .card .xp { font-size: 18px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .card .xp small { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .card .capb { position: absolute; top: 6px; right: 8px; color: var(--accent); font-weight: 700; font-size: 11px; }
+  .spark { display: flex; gap: 2px; align-items: flex-end; height: 22px; margin-top: 6px; }
+  .spark i { flex: 1; background: var(--accent-dim); border-radius: 1px; min-height: 1px; display: block; }
+  .spark i.on { background: var(--accent); }
+  .spark i.hi { outline: 1px solid var(--text); }
+  .gwstrip { display: flex; gap: 6px; margin: 10px 0 4px; flex-wrap: wrap; }
+  .gwstrip button {
+    background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; font-size: 12px; text-align: left; line-height: 1.3;
+  }
+  .gwstrip button.on { border-color: var(--accent); }
+  .gwstrip button b { display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .detail { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow: auto; }
+  .detail h2 { margin: 0 0 2px; font-size: 18px; }
+  .chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); margin-right: 4px; }
+  .chip.warn { border-color: var(--warn); color: var(--warn); }
+  .chip.err { border-color: var(--err); color: var(--err); }
+  .chip.ok { border-color: var(--accent); color: var(--accent); }
+  .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px 10px; margin: 8px 0; }
+  .kv div b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .kv div span { color: var(--muted); font-size: 11px; }
+  .bar { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 3px 0; }
+  .bar span:first-child { width: 70px; color: var(--muted); }
+  .bar i { display: block; height: 8px; background: var(--accent); border-radius: 2px; }
+  .bar i.neg { background: var(--err); }
+  .bar em { font-style: normal; font-variant-numeric: tabular-nums; width: 40px; text-align: right; }
+  .swap-head { display: flex; gap: 8px; align-items: center; margin: 12px 0 6px; flex-wrap: wrap; }
+  .swap-head input.wide { width: 150px; }
+  table.swap { font-size: 12px; } table.swap td, table.swap th { padding: 4px 6px 4px 0; }
+  table.swap tr { cursor: pointer; }
+  table.swap tr:hover td { background: var(--panel); }
+  table.swap tr.no td { opacity: .45; }
+  td.pos, td.neg { font-weight: 600; }
+  td.pos { color: var(--accent); } td.neg { color: var(--err); }
+  .delta { font-variant-numeric: tabular-nums; }
+  .delta.pos { color: var(--accent); } .delta.neg { color: var(--err); }
+  .warnbox { color: var(--warn); font-size: 13px; margin: 6px 0; }
+  .sb-summary .stat b small { font-size: 13px; color: var(--muted); margin-left: 4px; }
+  details.teams summary { cursor: pointer; color: var(--muted); margin-top: 16px; }
+  tr.mine td { color: var(--text); font-weight: 600; }
+  table.track { font-size: 12px; } table.track td, table.track th { padding: 4px 6px 4px 0; }
+  table.track tr.tot td { border-top: 1px solid var(--muted); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -90,6 +151,7 @@
 <main>
   <nav>
     <button data-tab="team" class="active">My Team</button>
+    <button data-tab="sandbox">Sandbox</button>
     <button data-tab="squad">Squad</button>
     <button data-tab="predict">Predictions</button>
     <button data-tab="player">Player</button>
@@ -209,6 +271,7 @@
       <h3>Per-gameweek breakdown <span class="muted" style="text-transform:none;letter-spacing:0">(uppercase opponent = home)</span></h3>
     </div>
     <div class="scroll"><table id="pl-table"></table></div>
+    <div id="pl-track-wrap" hidden><h3>Track record: what the model said before each deadline</h3><div id="pl-track"></div></div>
   </section>
 
   <section class="panel" id="tab-compare" hidden>
@@ -230,6 +293,30 @@
       <div class="scroll"><table id="cmp-table"></table></div>
     </div>
   </section>
+  <section class="panel" id="tab-sandbox" hidden>
+    <div class="controls">
+      <label>entry id <input type="number" id="sb-entry" class="wide" placeholder="from your Points page URL"></label>
+      <label>to GW <input type="number" id="sb-to" min="1" max="38" placeholder="next+4"></label>
+      <label title="fraction of bench xP counted">bench weight <input type="number" id="sb-bw" value="0.1" step="0.05" min="0" max="1"></label>
+      <button class="go" id="sb-run">Load</button>
+      <button class="go" id="sb-reset" hidden>Reset squad</button>
+    </div>
+    <div class="status" id="sb-status">Your squad as a sandbox: click a player, swap him for anyone, and watch the window xP, XI and captain recompute from the model's per-gameweek projections and this season's actual numbers.</div>
+    <div id="sb-out" hidden>
+      <div class="summary sb-summary" id="sb-summary"></div>
+      <div class="warnbox" id="sb-warn"></div>
+      <div class="sb-layout">
+        <div>
+          <div class="gwstrip" id="sb-gws"></div>
+          <div class="pitch" id="sb-pitch"></div>
+        </div>
+        <div class="detail" id="sb-detail"><span class="muted">Click a player on the left.</span></div>
+      </div>
+      <details class="teams"><summary>Team form and fixtures over the window</summary>
+        <div class="scroll"><table id="sb-teams"></table></div>
+      </details>
+    </div>
+  </section>
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -238,7 +325,7 @@ let forcePull = false;
 
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
-  ['team','squad','predict','player','compare'].forEach(t => $('tab-'+t).hidden = t !== b.dataset.tab);
+  ['team','sandbox','squad','predict','player','compare'].forEach(t => $('tab-'+t).hidden = t !== b.dataset.tab);
 });
 
 async function call(path, params, statusEl, btn) {
@@ -433,6 +520,8 @@ $('pl-run').onclick = async () => {
     {k:'cs',h:'CS'},{k:'gc2',h:'2+GC'},{k:'dc',h:'DC'},{k:'bonus',h:'bonus'},
     {k:'start_pct',h:'start %'},{k:'if_start',h:'if start'},{k:'true_total',h:'true xP'},
   ]);
+  $('pl-track-wrap').hidden = false;
+  $('pl-track').innerHTML = trackRecord(j.past);
 };
 
 $('cmp-run').onclick = async () => {
@@ -469,6 +558,275 @@ $('repull').onclick = () => {
 };
 
 $('pl-name').addEventListener('keydown', e => { if (e.key === 'Enter') $('pl-run').click(); });
+// The model's pre-deadline call for each finished gameweek (from `fpl backtest`:
+// built from the last snapshot before that deadline, no hindsight) vs what happened.
+function trackRecord(past) {
+  if (!past || !past.length) return '<div class="muted" style="font-size:12px">No replayed gameweeks yet — run <code>fpl backtest</code>.</div>';
+  const sum = k => past.reduce((s, r) => s + (r[k] || 0), 0);
+  const rows = past.map(r => {
+    const d = r.pts - r.xp;
+    return `<tr><td>GW${r.gw}</td><td>${r.vs || '–'}</td><td class="muted" title="snapshot ${r.snapshot}">${r.snapshot.slice(5)}</td><td class="num">${fmt(r.xp)}</td><td class="num muted">${fmt(r.xp_port)}</td><td class="num"><b>${r.pts}</b></td><td class="num ${dcls(d)}">${sgn(d)}</td><td class="num">${Math.round(r.start * 100)}%</td><td class="num">${r.mins}${r.started ? '' : '<span class="muted">*</span>'}</td><td class="num">${fmt(r.xg, 2)}</td><td class="num">${r.g}</td><td class="num">${fmt(r.xa, 2)}</td><td class="num">${r.a}</td></tr>`;
+  }).join('');
+  const dx = sum('pts') - sum('xp');
+  return `<div class="scroll"><table class="track"><tr><th>GW</th><th>vs</th><th>snap</th><th class="num">xP</th><th class="num">port</th><th class="num">actual</th><th class="num">Δ</th><th class="num">start</th><th class="num">mins</th><th class="num">xG</th><th class="num">G</th><th class="num">xA</th><th class="num">A</th></tr>${rows}
+    <tr class="tot"><td>total</td><td></td><td></td><td class="num">${fmt(sum('xp'))}</td><td class="num muted">${fmt(sum('xp_port'))}</td><td class="num"><b>${sum('pts')}</b></td><td class="num ${dcls(dx)}">${sgn(dx)}</td><td></td><td class="num">${sum('mins')}</td><td class="num">${fmt(sum('xg'), 2)}</td><td class="num">${sum('g')}</td><td class="num">${fmt(sum('xa'), 2)}</td><td class="num">${sum('a')}</td></tr></table></div>
+    <div class="muted" style="font-size:11px;margin-top:4px">model xP = the live model as it stood at that snapshot; port = pre-season workbook only. * came off the bench.</div>`;
+}
+
+/* ---------------- Sandbox ---------------- */
+const SB = { d: null, build: [], sel: null, gwView: null, afford: true, q: '' };
+const POS_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
+const FORMATIONS = [];
+for (const d of [3,4,5]) for (const m of [2,3,4,5]) for (const f of [1,2,3]) if (d+m+f === 10) FORMATIONS.push([d,m,f]);
+
+try { $('sb-entry').value = localStorage.getItem('fpl-entry') || ''; } catch (e) {}
+
+const sbP = code => SB.d.players[code];
+const sbOrig = () => SB.d.squad.map(p => p.code);
+const sbCost = code => { const o = SB.d.squad.find(p => p.code === code); return o ? o.sell : sbP(code).price; };
+const fmt = (v, d = 1) => (v == null || isNaN(v)) ? '–' : Number(v).toFixed(d);
+const sgn = v => (v > 0 ? '+' : '') + fmt(v);
+const dcls = v => v > 0.05 ? 'pos' : v < -0.05 ? 'neg' : '';
+const short = code => sbP(code)?.web || sbP(code)?.name.split(' ').pop() || '?';
+
+function sbGwXp(code, gw) { return sbP(code)?.gw[gw]?.xp ?? 0; }
+
+// Best legal XI for one gameweek: enumerate formations, take the top-n per
+// position by xP, captain the top scorer. Same objective as the optimizer's
+// per-GW lineup, without the MILP.
+function bestXI(codes, gw) {
+  const by = {}; POS_ORDER.forEach(p => by[p] = []);
+  codes.forEach(c => { const p = sbP(c); if (p) by[p.pos].push([c, sbGwXp(c, gw)]); });
+  POS_ORDER.forEach(p => by[p].sort((a, b) => b[1] - a[1]));
+  let best = null;
+  for (const [d, m, f] of FORMATIONS) {
+    if (by.GK.length < 1 || by.DEF.length < d || by.MID.length < m || by.FWD.length < f) continue;
+    const xi = [...by.GK.slice(0,1), ...by.DEF.slice(0,d), ...by.MID.slice(0,m), ...by.FWD.slice(0,f)];
+    const total = xi.reduce((s, x) => s + x[1], 0);
+    if (!best || total > best.total) best = { total, xi, form: `${d}-${m}-${f}` };
+  }
+  if (!best) return { total: 0, xi: new Set(), cap: null, form: '–', bench: 0 };
+  const cap = best.xi.reduce((a, b) => b[1] > a[1] ? b : a);
+  const xiSet = new Set(best.xi.map(x => x[0]));
+  const bench = codes.filter(c => !xiSet.has(c)).reduce((s, c) => s + sbGwXp(c, gw), 0);
+  return { total: best.total + cap[1], xi: xiSet, cap: cap[0], form: best.form, bench };
+}
+
+function sbEvaluate(codes) {
+  const bw = parseFloat($('sb-bw').value) || 0;
+  const per = SB.d.gws.map(gw => ({ gw, ...bestXI(codes, gw) }));
+  const total = per.reduce((s, g) => s + g.total + bw * g.bench, 0);
+  return { total, per };
+}
+
+function sbFinance(codes) {
+  const orig = sbOrig();
+  const out = orig.filter(c => !codes.includes(c));
+  const inn = codes.filter(c => !orig.includes(c));
+  const bank = SB.d.bank + out.reduce((s, c) => s + sbCost(c), 0) - inn.reduce((s, c) => s + sbP(c).price, 0);
+  const hits = Math.max(0, inn.length - SB.d.free_transfers) * 4;
+  return { out, inn, bank, hits };
+}
+
+function sbWarnings(codes) {
+  const w = [];
+  const fin = sbFinance(codes);
+  if (fin.bank < -1e-9) w.push(`Over budget by £${fmt(-fin.bank)}m.`);
+  const clubs = {};
+  codes.forEach(c => { const t = sbP(c)?.team; if (t) clubs[t] = (clubs[t] || 0) + 1; });
+  Object.entries(clubs).filter(([, n]) => n > 3).forEach(([t, n]) => w.push(`${n} players from ${t} (max 3).`));
+  const flagged = codes.filter(c => sbP(c) && sbP(c).status && sbP(c).status !== 'a');
+  if (flagged.length) w.push('Flagged: ' + flagged.map(c => `${short(c)} (${Math.round((sbP(c).chance ?? 1) * 100)}%)`).join(', ') + '.');
+  return w;
+}
+
+$('sb-run').onclick = async () => {
+  const entry = $('sb-entry').value.trim();
+  try { if (entry) localStorage.setItem('fpl-entry', entry); } catch (e) {}
+  $('live').checked = true;
+  const j = await call('/api/sandbox', { entry, to: $('sb-to').value }, $('sb-status'), $('sb-run'));
+  if (!j) return;
+  SB.d = j; SB.build = j.squad.map(p => p.code); SB.sel = null; SB.gwView = j.gws[0];
+  $('sb-entry').value = j.entry;
+  $('sb-out').hidden = false; $('sb-reset').hidden = false;
+  const missing = j.squad.filter(p => !p.in_model).map(p => p.name);
+  $('sb-status').textContent = `${j.team_name} (${j.manager}) · ${j.total_points} pts, rank ${j.overall_rank?.toLocaleString()} · planning GW${j.from_gw}–${j.to_gw}` +
+    (missing.length ? ` · not in model: ${missing.join(', ')}` : '') + (j.notes.length ? ' · ' + j.notes.join(' ') : '');
+  sbRenderTeams();
+  sbRender();
+};
+$('sb-entry').addEventListener('keydown', e => { if (e.key === 'Enter') $('sb-run').click(); });
+$('sb-bw').addEventListener('change', () => SB.d && sbRender());
+$('sb-reset').onclick = () => { SB.build = sbOrig(); SB.sel = null; sbRender(); };
+
+function sbRender() {
+  const d = SB.d, codes = SB.build;
+  const ev = sbEvaluate(codes), base = sbEvaluate(sbOrig()), fin = sbFinance(codes);
+  const net = ev.total - base.total - fin.hits;
+  $('sb-summary').innerHTML = `
+    <div class="stat"><b>${fmt(ev.total)}</b><span>window xP (this build)</span></div>
+    <div class="stat"><b class="delta ${dcls(net)}">${sgn(net)}</b><span>net vs your squad${fin.hits ? ` (after -${fin.hits} hit)` : ''}</span></div>
+    <div class="stat"><b>${fin.inn.length}<small>/ ${d.free_transfers} free</small></b><span>transfers</span></div>
+    <div class="stat"><b class="${fin.bank < 0 ? 'delta neg' : ''}">£${fmt(fin.bank)}m</b><span>bank after</span></div>
+    <div class="stat"><b>${fmt(ev.per[0].total)}</b><span>GW${ev.per[0].gw} XI xP · ${ev.per[0].form} · C ${short(ev.per[0].cap)}</span></div>`;
+  $('sb-warn').textContent = sbWarnings(codes).join(' ');
+
+  $('sb-gws').innerHTML = ev.per.map(g => `
+    <button data-gw="${g.gw}" class="${g.gw === SB.gwView ? 'on' : ''}">GW${g.gw} · ${g.form}<b>${fmt(g.total)} <span class="muted">C ${short(g.cap)}</span></b></button>`).join('');
+  $('sb-gws').querySelectorAll('button').forEach(b => b.onclick = () => { SB.gwView = +b.dataset.gw; sbRender(); });
+
+  const view = ev.per.find(g => g.gw === SB.gwView) || ev.per[0];
+  const orig = sbOrig();
+  const maxXp = Math.max(1, ...codes.flatMap(c => d.gws.map(gw => sbGwXp(c, gw))));
+  $('sb-pitch').innerHTML = POS_ORDER.map(pos => {
+    const group = codes.filter(c => sbP(c)?.pos === pos).sort((a, b) => sbP(b).xp - sbP(a).xp);
+    const unknown = codes.filter(c => !sbP(c) && d.squad.find(s => s.code === c)?.pos === pos);
+    return `<h4>${pos}</h4><div class="cards">` + group.map(c => {
+      const p = sbP(c), starts = view.xi.has(c), isNew = !orig.includes(c);
+      const flag = p.status && p.status !== 'a';
+      return `<div class="card ${starts ? '' : 'bench'} ${SB.sel === c ? 'sel' : ''} ${isNew ? 'new' : flag ? 'flag' : ''}" data-code="${c}">
+        ${view.cap === c ? '<span class="capb">C</span>' : ''}
+        <div class="nm">${p.web || p.name}</div>
+        <div class="sub"><span>${p.team} · £${fmt(isNew ? p.price : sbCost(c))}m</span><span>${Math.round(p.start * 100)}% st</span></div>
+        <div class="xp">${fmt(p.xp)}<small>xP</small> <small>${fmt(sbGwXp(c, view.gw))} this GW</small></div>
+        <div class="spark">${d.gws.map(gw => `<i class="${ev.per.find(g => g.gw === gw)?.xi.has(c) ? 'on' : ''} ${gw === view.gw ? 'hi' : ''}" style="height:${Math.max(4, 100 * sbGwXp(c, gw) / maxXp)}%" title="GW${gw} ${p.gw[gw]?.vs.join('+') || '–'}: ${fmt(sbGwXp(c, gw))}"></i>`).join('')}</div>
+      </div>`;
+    }).join('') + unknown.map(c => `<div class="card flag"><div class="nm">${d.squad.find(s => s.code === c).name}</div><div class="sub">not in model</div></div>`).join('') + '</div>';
+  }).join('');
+  $('sb-pitch').querySelectorAll('.card[data-code]').forEach(el => el.onclick = () => { SB.sel = +el.dataset.code; SB.q = ''; sbRender(); });
+
+  sbRenderDetail(ev);
+}
+
+function sbBars(items, maxAbs) {
+  const m = maxAbs || Math.max(0.1, ...items.map(([, v]) => Math.abs(v)));
+  return items.map(([k, v]) => `<div class="bar"><span>${k}</span><i class="${v < 0 ? 'neg' : ''}" style="width:${Math.min(100, 100 * Math.abs(v) / m)}%;max-width:160px"></i><em>${fmt(v)}</em></div>`).join('');
+}
+
+function sbRenderDetail(ev) {
+  const el = $('sb-detail');
+  if (SB.sel == null || !sbP(SB.sel)) { el.innerHTML = '<span class="muted">Click a player on the left.</span>'; return; }
+  const c = SB.sel, p = sbP(c), d = SB.d, a = p.actual || {}, t = d.teams[p.team] || {}, f = t.form;
+  const isNew = !sbOrig().includes(c);
+  const per90 = (v) => a.mins ? fmt(90 * v / a.mins, 2) : '–';
+  const status = p.status === 'a' || !p.status ? '' : `<span class="chip ${p.chance < 0.5 ? 'err' : 'warn'}">${Math.round(p.chance * 100)}% · ${p.news}</span>`;
+  const sp = p.setpiece || {};
+  const spChips = [['pen', sp.pen], ['FK', sp.fk], ['CK', sp.ck]].filter(([, v]) => v).map(([k, v]) => `<span class="chip ${v === 1 ? 'ok' : ''}">${k} #${v}</span>`).join('');
+  const startsIn = ev.per.filter(g => g.xi.has(c)).length;
+
+  const cats = Object.entries(p.cats).map(([k, v]) => [k, v]);
+  const fx = d.gws.map(gw => {
+    const g = p.gw[gw];
+    return `<tr><td>GW${gw}</td><td>${g ? g.vs.join(' + ') : '<span class="muted">blank</span>'}</td><td class="num">${g ? fmt(g.xp) : '–'}</td><td class="num">${g ? Math.round(g.start * 100) + '%' : '–'}</td><td class="num">${g ? fmt(g.xg, 2) : '–'}</td><td class="num">${g ? fmt(g.xa, 2) : '–'}</td><td class="num">${g ? Math.round(g.cs * 100) + '%' : '–'}</td><td>${ev.per.find(x => x.gw === gw)?.xi.has(c) ? (ev.per.find(x => x.gw === gw).cap === c ? '<b class="cap">C</b>' : '✓') : '<span class="muted">bench</span>'}</td></tr>`;
+  }).join('');
+
+  const actual = p.actual ? `
+    <h3>This season (actual)</h3>
+    <div class="kv">
+      <div><b>${a.pts ?? '–'}</b><span>points</span></div>
+      <div><b>${a.mins ?? '–'}</b><span>minutes</span></div>
+      <div><b>${a.starts ?? '–'}</b><span>starts</span></div>
+      <div><b>${a.g ?? '–'}</b><span>goals</span></div>
+      <div><b>${a.a ?? '–'}</b><span>assists</span></div>
+      <div><b>${fmt(a.xg, 2)}</b><span>xG · ${per90(a.xg)}/90</span></div>
+      <div><b>${fmt(a.xa, 2)}</b><span>xA · ${per90(a.xa)}/90</span></div>
+      <div><b>${fmt(a.xgi, 2)}</b><span>xGI</span></div>
+      <div><b>${a.cs ?? '–'}</b><span>clean sheets</span></div>
+      <div><b>${a.dc ?? '–'}</b><span>def. contrib</span></div>
+      <div><b>${a.bonus ?? '–'}</b><span>bonus · ${a.bps ?? '–'} bps</span></div>
+      <div><b>${a.form ?? '–'}</b><span>form · ${a.ppg ?? '–'} ppg</span></div>
+      <div><b>${a.own ?? '–'}%</b><span>owned</span></div>
+      <div><b class="delta ${dcls(a.dprice)}">${a.dprice != null ? sgn(a.dprice / 10) : '–'}</b><span>price since GW1</span></div>
+      <div><b>${a.ict ?? '–'}</b><span>ICT</span></div>
+      <div><b>${(a.tin ?? 0).toLocaleString()} / ${(a.tout ?? 0).toLocaleString()}</b><span>in / out this GW</span></div>
+    </div>` : '<div class="muted">Actual stats need live data.</div>';
+
+  const team = `
+    <h3>${t.name || p.team}</h3>
+    ${f ? `<div class="kv">
+      <div><b class="delta ${dcls(f.att_mult - 1)}">×${fmt(f.att_mult, 2)}</b><span>attack mult</span></div>
+      <div><b class="delta ${dcls(1 - f.def_mult)}">×${fmt(f.def_mult, 2)}</b><span>conceded mult</span></div>
+      <div><b>${fmt(f.xg)}<small class="muted"> / ${fmt(f.exp_xg)}</small></b><span>xG vs prior, ${f.games} gms</span></div>
+      <div><b>${fmt(f.xgc)}<small class="muted"> / ${fmt(f.exp_xgc)}</small></b><span>xGC vs prior</span></div>
+    </div>` : ''}
+    ${t.actual && t.actual.played ? `<div class="muted" style="font-size:12px">P${t.actual.played} W${t.actual.win} D${t.actual.draw} L${t.actual.loss} · ${t.actual.points} pts · ${t.actual.position}th</div>` : ''}
+    <div style="margin-top:6px">${d.gws.map(gw => `<span class="fix">GW${gw} <b>${(t.fixtures?.[gw] || ['–']).join('+')}</b></span>`).join('')}</div>`;
+
+  // swap candidates
+  const outCost = isNew ? p.price : sbCost(c);
+  const budget = sbFinance(SB.build).bank + outCost;
+  const q = SB.q.toLowerCase();
+  let cands = Object.values(d.players).filter(x => x.pos === p.pos && !SB.build.includes(x.code));
+  if (q) cands = cands.filter(x => x.name.toLowerCase().includes(q) || x.team.toLowerCase().includes(q));
+  else if (SB.afford) cands = cands.filter(x => x.price <= budget + 1e-9);
+  cands.sort((x, y) => y.xp - x.xp);
+  const rows = cands.slice(0, 40).map(x => {
+    const ok = x.price <= budget + 1e-9, delta = x.xp - p.xp, ax = x.actual || {};
+    return `<tr data-code="${x.code}" class="${ok ? '' : 'no'}" title="${ok ? 'click to swap in' : 'over budget'}">
+      <td>${x.web || x.name}${x.status && x.status !== 'a' ? ' <span class="chip warn">' + Math.round(x.chance * 100) + '%</span>' : ''}</td>
+      <td class="muted">${x.team}</td><td class="num">£${fmt(x.price)}</td>
+      <td class="num">${fmt(x.xp)}</td><td class="num ${dcls(delta)}">${sgn(delta)}</td>
+      <td class="num">${Math.round(x.start * 100)}%</td>
+      <td class="num">${ax.pts ?? ''}</td><td class="num">${ax.mins ?? ''}</td><td class="num">${fmt(ax.xgi, 1)}</td><td class="num">${ax.form ?? ''}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <h2>${p.name}</h2>
+    <div style="margin-bottom:6px"><span class="chip">${p.team}</span><span class="chip">${p.pos}</span><span class="chip">£${fmt(p.price)}m${!isNew && sbCost(c) !== p.price ? ' · sells £' + fmt(sbCost(c)) + 'm' : ''}</span>${isNew ? '<span class="chip ok">swapped in</span>' : ''}${status}${spChips}</div>
+    <div class="kv">
+      <div><b>${fmt(p.xp)}</b><span>xP GW${d.from_gw}–${d.to_gw}</span></div>
+      <div><b>${fmt(p.xp_if_start)}</b><span>if he starts every GW</span></div>
+      <div><b>${Math.round(p.start * 100)}%</b><span>model start chance</span></div>
+      <div><b>${startsIn}/${d.gws.length}</b><span>in your XI</span></div>
+      ${p.past ? `<div><b>${fmt(p.past.reduce((s, r) => s + r.xp, 0))} <small class="muted">→</small> ${p.past.reduce((s, r) => s + r.pts, 0)}</b><span>said / got, GW${p.past[0].gw}–${p.past[p.past.length - 1].gw}</span></div>` : ''}
+    </div>
+    <h3>Where the xP comes from</h3>${sbBars(cats)}
+    <h3>Gameweek by gameweek</h3>
+    <div class="scroll"><table><tr><th>GW</th><th>vs</th><th class="num">xP</th><th class="num">start</th><th class="num">xG</th><th class="num">xA</th><th class="num">CS</th><th>XI</th></tr>${fx}</table></div>
+    <h3>Track record: what the model said before each deadline</h3>
+    ${trackRecord(p.past)}
+    ${actual}
+    ${team}
+    <div class="swap-head"><h3 style="margin:0">Swap for a ${p.pos}</h3>
+      <input type="text" class="wide" id="sb-q" placeholder="search name or team" value="${SB.q}">
+      <label style="display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)"><input type="checkbox" id="sb-afford" style="width:auto" ${SB.afford ? 'checked' : ''}> affordable only (≤ £${fmt(budget)}m)</label>
+      ${isNew ? `<button class="go" id="sb-undo">Undo this swap</button>` : ''}
+    </div>
+    <div class="scroll"><table class="swap"><tr><th>player</th><th></th><th class="num">£</th><th class="num">xP</th><th class="num">Δ</th><th class="num">start</th><th class="num">pts</th><th class="num">mins</th><th class="num">xGI</th><th class="num">form</th></tr>${rows}</table></div>`;
+
+  el.querySelectorAll('table.swap tr[data-code]').forEach(tr => tr.onclick = () => {
+    const i = SB.build.indexOf(c); SB.build[i] = +tr.dataset.code; SB.sel = +tr.dataset.code; SB.q = ''; sbRender();
+    $('sb-detail').scrollTop = 0;
+  });
+  const qEl = $('sb-q');
+  qEl.oninput = () => { SB.q = qEl.value; const pos = qEl.selectionStart; sbRenderDetail(ev); const n = $('sb-q'); n.focus(); n.setSelectionRange(pos, pos); };
+  $('sb-afford').onchange = e => { SB.afford = e.target.checked; sbRenderDetail(ev); };
+  const undo = $('sb-undo');
+  if (undo) undo.onclick = () => {
+    const i = SB.build.indexOf(c);
+    const back = sbOrig().find(o => !SB.build.includes(o) && sbP(o)?.pos === p.pos) ?? sbOrig().find(o => !SB.build.includes(o));
+    if (back != null) { SB.build[i] = back; SB.sel = back; sbRender(); }
+  };
+}
+
+function sbRenderTeams() {
+  const d = SB.d, mine = new Set(SB.build.map(c => sbP(c)?.team));
+  const rows = Object.entries(d.teams).map(([k, t]) => ({ k, ...t })).filter(t => t.form).sort((a, b) => b.form.att_mult - a.form.att_mult);
+  $('sb-teams').innerHTML = `<tr><th>team</th><th class="num">games</th><th class="num">xG</th><th class="num">expected</th><th class="num">attack ×</th><th class="num">xGC</th><th class="num">expected</th><th class="num">conceded ×</th>${d.gws.map(g => `<th>GW${g}</th>`).join('')}</tr>` +
+    rows.map(t => `<tr class="${mine.has(t.k) ? 'mine' : ''}"><td>${t.k}</td><td class="num">${t.form.games}</td><td class="num">${fmt(t.form.xg)}</td><td class="num">${fmt(t.form.exp_xg)}</td><td class="num ${dcls(t.form.att_mult - 1)}">${fmt(t.form.att_mult, 2)}</td><td class="num">${fmt(t.form.xgc)}</td><td class="num">${fmt(t.form.exp_xgc)}</td><td class="num ${dcls(1 - t.form.def_mult)}">${fmt(t.form.def_mult, 2)}</td>${d.gws.map(g => `<td>${(t.fixtures[g] || ['–']).join('+')}</td>`).join('')}</tr>`).join('');
+}
+
+// deep link: /#sandbox loads your squad; /#sandbox/Tarkowski also opens that player
+if (location.hash.startsWith('#sandbox')) {
+  document.querySelector('nav button[data-tab="sandbox"]').click();
+  const who = decodeURIComponent(location.hash.split('/')[1] || '').toLowerCase();
+  $('sb-run').onclick().then(() => {
+    if (!who || !SB.d) return;
+    const hit = SB.build.find(c => sbP(c)?.name.toLowerCase().includes(who)) ?? Object.values(SB.d.players).find(p => p.name.toLowerCase().includes(who))?.code;
+    if (hit != null) { SB.sel = hit; sbRender(); }
+  });
+}
 </script>
 </body>
 </html>

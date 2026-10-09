@@ -102,8 +102,12 @@ points → planning-window aggregation → squad optimization.
   top N) while the season runs; each pass backfills missing gameweeks, so a
   missed week self-heals. `data/archive/` is gitignored here but is its own
   git repo, backed up to the private `Dan-Ebbah/fpl-archive` GitHub repo;
-  `scripts/weekly_archive.sh` (run by the `com.fpl-model.archive` launchd
-  agent, Tuesdays 10:00) does the archive pass then commits and pushes.
+  `scripts/weekly.sh` (run by the `com.fpl-model.archive` launchd agent,
+  Tuesdays 10:00, log in `data/weekly.log`) is the whole weekly job: API
+  snapshot, archive pass, backtest replay, then commit and push the archive
+  repo — each step on its own, so one failing does not stop the rest, with a
+  summary and non-zero exit if any did. `scripts/weekly.sh backtest` runs
+  one step by hand.
 
 ## Layout
 
@@ -122,6 +126,7 @@ uv run pytest                      # parity suite
 uv run fpl web                     # browser UI: solve squads, rank players
 uv run fpl squad --to-gw 8 --refresh   # same from the terminal
 uv run fpl team --entry 1234567    # YOUR team: transfers, XI, captain (id remembered)
+uv run fpl web                     # then open http://127.0.0.1:8765/#sandbox — what-if squad sandbox
 uv run fpl team --max-transfers 1 --to-gw 12
 uv run fpl form                    # team form multipliers the model is applying
 uv run fpl style --team NEW        # home/away tilt, which positions the chances go through
@@ -129,6 +134,7 @@ uv run fpl scorers --gw 5          # anytime goalscorer / assist probabilities
 uv run fpl backtest                # replay past deadlines, score each model layer (~1 min)
 uv run python -m fpl_model.api     # snapshot today's FPL API data
 uv run fpl archive                 # weekly: archive elite managers' seasons
+scripts/weekly.sh [step...]        # the Tuesday job by hand: snapshot, archive, backtest, backup
 ```
 
 `fpl web` (src/fpl_model/web.py + web.html) serves a local single-page UI on
@@ -141,6 +147,24 @@ any two players head-to-head: verdict cards side by side, per-gameweek
 fixtures and xP, and the window/price deltas. "Live data" uses the same refresh path as the CLI
 (and stores a snapshot per pull); untick it to run off the frozen workbook
 snapshot.
+
+The **Sandbox** tab is the what-if view: your squad as cards, each with its
+window xP and a per-gameweek sparkline, the best XI / formation / captain for
+every gameweek recomputed in the browser from the model's per-GW projections
+(same objective as the optimizer's lineup step, so an untouched squad matches
+`fpl team`'s no-transfer baseline exactly). Click a player for his xP split by
+scoring category, gameweek-by-gameweek fixtures with start chance and xG/xA,
+this season's actual numbers from the FPL API (minutes, starts, xGI, defensive
+contribution, bonus, ownership, price moves, set-piece duty), his club's
+schedule-adjusted form, and a swap list of every player in his position
+ranked by xP with the delta, filtered to what you can afford. Swaps update the
+window xP, net gain, transfers used, hit cost and bank instantly; `Reset
+squad` goes back. `/#sandbox/Tarkowski` deep-links to a player. Every player
+detail (Sandbox and Player tabs) also carries a **track record**: for each
+finished gameweek, the xP the model gave him from the last snapshot stored
+before that deadline (the backtester's replay, so no hindsight — the live
+model and the bare port side by side), next to his actual points, minutes
+and goal involvement. Run `fpl backtest` after each gameweek to extend it.
 
 ## Faithful-port policy
 

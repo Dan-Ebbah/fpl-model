@@ -25,7 +25,7 @@ HTML_PATH = Path(__file__).parent / "web.html"
 _cache: dict = {}  # refresh flag -> cli.Pipeline
 _cache_lock = threading.Lock()
 
-
+"""A simple cache for the pipeline."""
 def _pipeline(refresh: bool, force: bool = False):
     from .cli import build_pipeline
 
@@ -325,6 +325,7 @@ def player_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
         raise ValueError(f"no player matching {name!r}")
     if len(names) > 1:
         raise ValueError(f"ambiguous — matches: {', '.join(names[:8])}")
+    code = int(rows["Code"].iloc[0])
     rows = rows[(rows["gw"] >= from_gw) & (rows["gw"] <= to_gw)]
     rows = rows[rows["VS"].str.len() >= 3]
     cols = {
@@ -333,7 +334,190 @@ def player_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
         "IF START TOTAL": "if_start", "TRUE TOTAL": "true_total",
     }
     out = rows[list(cols)].rename(columns=cols).round(2)
-    return {"name": names[0], "rows": json.loads(out.to_json(orient="records"))}
+    past = track_record(ppts).get(code, [])
+    return {"name": names[0], "rows": json.loads(out.to_json(orient="records")), "past": past}
+
+
+# ---------------------------------------------------------------------------
+# Sandbox: one payload the browser can recompute against without the solver.
+# ---------------------------------------------------------------------------
+
+_ACTUAL_COLS = {
+    # bootstrap field -> short key in the payload
+    "minutes": "mins", "starts": "starts", "total_points": "pts",
+    "goals_scored": "g", "assists": "a", "expected_goals": "xg",
+    "expected_assists": "xa", "expected_goal_involvements": "xgi",
+    "expected_goals_conceded": "xgc", "clean_sheets": "cs",
+    "goals_conceded": "gc", "defensive_contribution": "dc", "bonus": "bonus",
+    "bps": "bps", "saves": "saves", "yellow_cards": "yc", "red_cards": "rc",
+    "form": "form", "points_per_game": "ppg", "selected_by_percent": "own",
+    "transfers_in_event": "tin", "transfers_out_event": "tout",
+    "cost_change_start": "dprice", "ict_index": "ict", "threat": "threat",
+    "creativity": "creativity", "influence": "influence",
+}
+
+
+def _window_rows(ppts: pd.DataFrame, from_gw: int, to_gw: int) -> pd.DataFrame:
+    w = ppts[(ppts["gw"] >= from_gw) & (ppts["gw"] <= to_gw)]
+    return w[w["VS"].str.len() >= 3]  # drop blank fixture slots
+
+
+def track_record(ppts: pd.DataFrame | None = None, path: Path | None = None) -> dict[int, list[dict]]:
+    """What the model said before each finished deadline, next to what happened.
+
+    Read from the backtester's table (`fpl backtest`), so every row was built
+    from the last snapshot stored *before* that gameweek's deadline — no
+    hindsight. `xp` is the live path (every in-season layer on), `xp_port` the
+    bare pre-season port. Empty dict when no backtest has been run.
+    """
+    from .backtest import RESULTS_PATH
+
+    path = path or RESULTS_PATH
+    if not path.exists():
+        return {}
+    t = pd.read_parquet(path)
+    if t.empty:
+        return {}
+    live = t[t["variant"] == "all"].set_index(["Code", "gw"])
+    port = t[t["variant"] == "port"].set_index(["Code", "gw"])["xp"]
+    vs: dict[tuple[int, int], str] = {}
+    if ppts is not None:
+        past = ppts[(ppts["gw"] <= int(t["gw"].max())) & (ppts["VS"].str.len() >= 3)]
+        vs = past.groupby(["Code", "gw"])["VS"].agg(" + ".join).to_dict()
+    out: dict[int, list[dict]] = {}
+    for (code, gw), r in live.sort_index().iterrows():
+        out.setdefault(int(code), []).append({
+            "gw": int(gw), "snapshot": r["snapshot"], "vs": vs.get((code, gw), ""),
+            "xp": round(float(r["xp"]), 2), "xp_port": round(float(port.get((code, gw), float("nan"))), 2),
+            "start": round(float(r["start_pct"]), 3),
+            "xg": round(float(r["exp_goals"]), 3), "xa": round(float(r["exp_assists"]), 3),
+            "pts": int(r["points"]), "mins": int(r["minutes"]), "started": bool(r["started"]),
+            "g": int(r["goals"]), "a": int(r["assists"]), "price": float(r["price"]),
+        })
+    return out
+
+
+def sandbox_tables(
+    ppts: pd.DataFrame, prices: pd.Series, from_gw: int, to_gw: int,
+    boot: dict | None = None, team_form: pd.DataFrame | None = None,
+    with_past: bool = True,
+) -> dict:
+    """Everything the sandbox needs, keyed by player code and team.
+
+    Pure: no network, no solver. `players` carries the model view (per-GW xP,
+    fixtures, start chance, expected goals/assists, category split) and, when
+    a bootstrap is given, the season's actual stats. `teams` carries each
+    club's fixture list over the window and the in-season form multipliers.
+    """
+    w = _window_rows(ppts, from_gw, to_gw)
+    gws = list(range(from_gw, to_gw + 1))
+    boot_by_code = {e["code"]: e for e in boot["elements"]} if boot else {}
+    past = track_record(ppts) if with_past else {}
+
+    players: dict[int, dict] = {}
+    for code, g in w.groupby("Code", sort=False):
+        first = g.iloc[0]
+        price = prices.get(code)
+        if price is None or pd.isna(price):
+            continue
+        by_gw: dict[int, dict] = {}
+        for gw, gg in g.groupby("gw"):
+            by_gw[int(gw)] = {
+                "xp": round(float(gg["TRUE TOTAL"].sum()), 2),
+                "vs": list(gg["VS"]),
+                "start": round(float(gg["Start %"].mean()), 3),
+                "xg": round(float(gg["exp_goals"].sum()), 3),
+                "xa": round(float(gg["exp_assists"].sum()), 3),
+                "cs": round(float(gg["CS%"].mean()), 3),
+            }
+        cats = {k: round(float(g[c].sum()), 2) for k, c in
+                [("goals", "8"), ("assists", "7"), ("cs", "9"), ("conceded", "10"),
+                 ("dc", "11"), ("bonus", "6")]}
+        rec = {
+            "code": int(code), "name": first["FPL_Name"], "team": first["TEAM"],
+            "pos": first["POS"], "price": round(float(price), 1),
+            "xp": round(float(g["TRUE TOTAL"].sum()), 2),
+            "xp_if_start": round(float(g["IF START TOTAL"].sum()), 2),
+            "start": round(float(g["Start %"].mean()), 3),
+            "gw": {str(k): v for k, v in sorted(by_gw.items())},
+            "cats": cats,
+        }
+        if past.get(int(code)):
+            rec["past"] = past[int(code)]
+        e = boot_by_code.get(int(code))
+        if e:
+            rec["web"] = e["web_name"]
+            rec["status"] = e["status"]
+            rec["chance"] = (e["chance_of_playing_next_round"] if e["chance_of_playing_next_round"] is not None else 100) / 100
+            rec["news"] = e["news"] or ""
+            rec["actual"] = {k: _num_or_str(e.get(f)) for f, k in _ACTUAL_COLS.items()}
+            rec["setpiece"] = {
+                "pen": e.get("penalties_order"), "fk": e.get("direct_freekicks_order"),
+                "ck": e.get("corners_and_indirect_freekicks_order"),
+            }
+        players[int(code)] = rec
+
+    teams: dict[str, dict] = {}
+    for team, g in w.groupby("TEAM"):
+        fx = {str(int(gw)): sorted(set(gg["VS"])) for gw, gg in g.groupby("gw")}
+        teams[team] = {"fixtures": fx}
+    if team_form is not None:
+        for abvr, row in team_form.iterrows():
+            t = teams.setdefault(str(abvr), {"fixtures": {}})
+            t["form"] = {k: round(float(row[k]), 3) for k in
+                         ["games", "xg", "exp_xg", "att_mult", "xgc", "exp_xgc", "def_mult"]
+                         if k in row.index}
+    if boot:
+        for t in boot["teams"]:
+            tt = teams.get(t["short_name"])
+            if tt is not None:
+                tt["name"] = t["name"]
+                tt["actual"] = {k: t.get(k) for k in ["played", "win", "draw", "loss", "points", "position"]}
+    return {"gws": gws, "players": players, "teams": teams}
+
+
+def _num_or_str(v):
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return v
+    return int(f) if f.is_integer() else round(f, 2)
+
+
+def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -> dict:
+    """Live sandbox: your squad + the full player/team tables for the window."""
+    from . import api, team as team_mod
+    from .cli import _prices as cli_prices
+
+    entry_id = team_mod.resolve_entry(entry)
+    boot = api.fetch_bootstrap()
+    my = team_mod.load_my_team(entry_id, boot)
+    if entry:
+        team_mod.remember_entry(entry_id)
+    pipe = _pipeline(True, force)
+    prices = cli_prices(True, boot)
+    from_gw = my.next_gw
+    to_gw = to_gw or from_gw + 4
+    tables = sandbox_tables(pipe.ppts, prices, from_gw, to_gw, boot=boot, team_form=pipe.team_form)
+    squad = []
+    for p in my.picks:
+        rec = tables["players"].get(p.code)
+        squad.append({
+            "code": p.code, "name": p.name, "team": p.team, "pos": p.pos,
+            "purchase": p.purchase, "now": p.now, "sell": p.sell,
+            "captain": p.is_captain, "vice": p.is_vice, "bench_slot": p.bench_slot,
+            "in_model": rec is not None,
+        })
+    return {
+        "entry": my.entry_id, "manager": my.manager, "team_name": my.team_name,
+        "overall_rank": my.overall_rank, "total_points": my.total_points,
+        "gw": my.gw, "from_gw": from_gw, "to_gw": to_gw,
+        "bank": my.bank, "free_transfers": my.free_transfers,
+        "chips_available": my.chips_available, "notes": my.notes,
+        "squad": squad, **tables,
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -392,6 +576,9 @@ class Handler(BaseHTTPRequestHandler):
                     q.get("name", ""), int(q.get("from", 1)),
                     int(q.get("to", 8)), q.get("refresh") == "1",
                 ))
+            elif url.path == "/api/sandbox":
+                opt = lambda k, f: f(q[k]) if q.get(k) not in (None, "") else None  # noqa: E731
+                self._json(200, sandbox_payload(opt("entry", int), opt("to", int), q.get("force") == "1"))
             elif url.path == "/api/player":
                 self._json(200, player_payload(
                     q.get("name", ""), int(q.get("from", 1)),
