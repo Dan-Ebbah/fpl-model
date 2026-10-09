@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import argparse
 
-from . import api, archive, explain, reference, report, team as team_mod, web
+from . import api, archive, backtest, explain, reference, report, team as team_mod, web
 from .optimizer import optimize_squad, select_pool
 from .pipeline import build_pipeline, build_ppts, player_prices, resolve_codes
 from .plan import plan_transfers
@@ -166,9 +166,7 @@ def cmd_style(args: argparse.Namespace) -> None:
 
 
 def cmd_backtest(args: argparse.Namespace) -> None:
-    from . import backtest as bt
-
-    table, skipped, ev = bt.run(gws=args.gw, n_boot=args.boot)
+    table, skipped, ev = backtest.run(gws=args.gw, n_boot=args.boot)
     report.print_skipped_gameweeks(skipped)
     if table.empty:
         raise SystemExit("nothing to score yet")

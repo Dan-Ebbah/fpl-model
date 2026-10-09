@@ -15,9 +15,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from .optimizer import captains_by_gw, formation
+from . import api, explain, team as team_mod
+from .backtest import RESULTS_PATH
+from .optimizer import captains_by_gw, formation, optimize_squad, select_pool
 from .pipeline import Pipeline, build_pipeline, player_prices, resolve_codes
-from .predict import gameweek_window, has_fixture, with_fixture
+from .plan import plan_transfers
+from .predict import aggregate_window, gameweek_window, has_fixture, with_fixture
+from .priors import load_priors
 from .rules import DEFAULT_FT_VALUE, DEFAULT_HORIZON
 
 # --- the per-process projection cache ---------------------------------------
@@ -64,7 +68,6 @@ def predictions_payload(
     position / team / max price, sort by `sort` (pts, value or price) and
     keep the top `top` rows.
     """
-    from .predict import aggregate_window
 
     ppts = cached_ppts(refresh, force)
     pred = aggregate_window(ppts, from_gw, to_gw)
@@ -95,7 +98,6 @@ def squad_payload(
     names resolved to codes, pool trimmed, then the MILP. Returns the squad
     table, the first gameweek's XI/bench/formation and the captain per GW.
     """
-    from .optimizer import optimize_squad, select_pool
 
     ppts = cached_ppts(refresh, force)
     window = gameweek_window(ppts, from_gw, to_gw)
@@ -141,8 +143,6 @@ def team_payload(
     force: bool = False, ft_value: float = DEFAULT_FT_VALUE,
 ) -> dict:
     """Your team: reconstructed state + the deadline plan (always live data)."""
-    from . import api, explain, team as team_mod
-    from .plan import plan_transfers
 
     entry_id = team_mod.resolve_entry(entry)
     boot = api.fetch_bootstrap()
@@ -316,8 +316,6 @@ def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
     computes: window xP and ranks, minutes security, value, fixture shape,
     and confidence caveats (injury flags, hand-set priors).
     """
-    from .predict import aggregate_window
-    from .priors import load_priors
 
     ppts = cached_ppts(refresh)
     pred = aggregate_window(ppts, from_gw, to_gw)
@@ -447,7 +445,6 @@ def track_record(ppts: pd.DataFrame | None = None, path: Path | None = None) -> 
     hindsight. `xp` is the live path (every in-season layer on), `xp_port` the
     bare pre-season port. Empty dict when no backtest has been run.
     """
-    from .backtest import RESULTS_PATH
 
     path = path or RESULTS_PATH
     if not path.exists():
@@ -581,7 +578,6 @@ def _num_or_str(v):
 
 def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -> dict:
     """Live sandbox: your squad + the full player/team tables for the window."""
-    from . import api, team as team_mod
 
     entry_id = team_mod.resolve_entry(entry)
     boot = api.fetch_bootstrap()
