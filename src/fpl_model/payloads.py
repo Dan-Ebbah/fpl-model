@@ -3,20 +3,39 @@
 Everything the browser renders is assembled here, with no HTTP in sight —
 `web.Handler` only parses the query string and calls one of these. They are
 testable without a server (see tests/test_web.py) and read their projections
-through the per-process cache that `web` keeps (`_pipeline`, `_ppts`,
-`_prices`), so a workbook-snapshot build and a live build each happen once.
+through a per-process cache (`cached_pipeline`), so a workbook-snapshot build
+and a live build each happen once for the life of the server.
 """
 
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 
 import pandas as pd
 
 from .optimizer import captains_by_gw, formation
+from .pipeline import Pipeline, build_pipeline, player_prices, resolve_codes
 from .predict import gameweek_window, has_fixture, with_fixture
 from .rules import DEFAULT_FT_VALUE, DEFAULT_HORIZON
+
+# --- the per-process projection cache ---------------------------------------
+_cache: dict[bool, Pipeline] = {}  # refresh flag -> Pipeline
+_cache_lock = threading.Lock()
+
+
+def cached_pipeline(refresh: bool, force: bool = False) -> Pipeline:
+    """One pipeline build per data source (workbook snapshot vs live pull), rebuilt on `force`."""
+    with _cache_lock:
+        if force or refresh not in _cache:
+            _cache[refresh] = build_pipeline(refresh=refresh)
+        return _cache[refresh]
+
+
+def cached_ppts(refresh: bool, force: bool = False) -> pd.DataFrame:
+    return cached_pipeline(refresh, force).ppts
+
 
 # --- verdict thresholds ------------------------------------------------------
 ELITE_RANK = 5  # overall rank at or above which a player is an "elite pick"
@@ -46,11 +65,10 @@ def predictions_payload(
     keep the top `top` rows.
     """
     from .predict import aggregate_window
-    from .web import _ppts, _prices
 
-    ppts = _ppts(refresh, force)
+    ppts = cached_ppts(refresh, force)
     pred = aggregate_window(ppts, from_gw, to_gw)
-    pred["price"] = pred["Code"].map(_prices(refresh))
+    pred["price"] = pred["Code"].map(player_prices(refresh))
     pred = pred[pred["price"].notna()].copy()
     pred["value"] = (pred["true_pts"] / pred["price"] / pred["games"]).where(
         (pred["price"] > 0) & (pred["games"] > 0), 0.0
@@ -77,17 +95,15 @@ def squad_payload(
     names resolved to codes, pool trimmed, then the MILP. Returns the squad
     table, the first gameweek's XI/bench/formation and the captain per GW.
     """
-    from .pipeline import resolve_codes
     from .optimizer import optimize_squad, select_pool
-    from .web import _ppts, _prices
 
-    ppts = _ppts(refresh, force)
+    ppts = cached_ppts(refresh, force)
     window = gameweek_window(ppts, from_gw, to_gw)
     xp = window.pivot_table(index="Code", columns="gw", values="TRUE TOTAL", aggfunc="sum")
     players = (
         window.groupby("Code")[["FPL_Name", "TEAM", "POS"]]
         .first()
-        .join(_prices(refresh).rename("price"))
+        .join(player_prices(refresh).rename("price"))
     )
     players = players[players["price"].notna()]
 
@@ -126,16 +142,14 @@ def team_payload(
 ) -> dict:
     """Your team: reconstructed state + the deadline plan (always live data)."""
     from . import api, explain, team as team_mod
-    from .pipeline import player_prices, resolve_codes
     from .plan import plan_transfers
-    from .web import _pipeline
 
     entry_id = team_mod.resolve_entry(entry)
     boot = api.fetch_bootstrap()
     my = team_mod.load_my_team(entry_id, boot)
     if entry:
         team_mod.remember_entry(entry_id)  # only once it resolved to a real team
-    pipe = _pipeline(True, force)
+    pipe = cached_pipeline(True, force)
     ppts, prices = pipe.ppts, player_prices(True, boot)
     names = ppts.groupby("Code")[["FPL_Name"]].first()
     plan = plan_transfers(
@@ -304,11 +318,10 @@ def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
     """
     from .predict import aggregate_window
     from .priors import load_priors
-    from .web import _ppts, _prices
 
-    ppts = _ppts(refresh)
+    ppts = cached_ppts(refresh)
     pred = aggregate_window(ppts, from_gw, to_gw)
-    pred["price"] = pred["Code"].map(_prices(refresh))
+    pred["price"] = pred["Code"].map(player_prices(refresh))
     pred = pred[pred["price"].notna()].copy()
 
     row = _match_player(pred, name)
@@ -374,9 +387,8 @@ def player_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
     the window's real fixtures, columns renamed to the short JSON keys the
     browser reads, plus the backtester's track record for the player.
     """
-    from .web import _ppts
 
-    ppts = _ppts(refresh)
+    ppts = cached_ppts(refresh)
     rows = ppts[ppts["FPL_Name"].str.contains(name, case=False, na=False)]
     names = rows["FPL_Name"].unique()
     if len(names) == 0:
@@ -570,15 +582,13 @@ def _num_or_str(v):
 def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -> dict:
     """Live sandbox: your squad + the full player/team tables for the window."""
     from . import api, team as team_mod
-    from .pipeline import player_prices
-    from .web import _pipeline
 
     entry_id = team_mod.resolve_entry(entry)
     boot = api.fetch_bootstrap()
     my = team_mod.load_my_team(entry_id, boot)
     if entry:
         team_mod.remember_entry(entry_id)
-    pipe = _pipeline(True, force)
+    pipe = cached_pipeline(True, force)
     prices = player_prices(True, boot)
     from_gw = my.next_gw
     to_gw = to_gw or from_gw + DEFAULT_HORIZON

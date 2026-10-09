@@ -33,10 +33,8 @@ import numpy as np
 import pandas as pd
 
 from . import api, matchlog, reference
-from .config import DEFAULT_PARAMS
 from .inseason import PORT_ONLY, Layers
-from .model_build import build_model
-from .pipeline import build_pipeline
+from .pipeline import base_model_from_bootstrap, build_pipeline
 from .rules import GAMEWEEKS
 
 RESULTS_PATH = api.SNAPSHOT_DIR / "backtest.parquet"
@@ -151,12 +149,9 @@ def replay(
             continue
         past = log[log["round"] < gw]
         act = actuals(log, gw)
-        elements = pd.DataFrame(snap.boot["elements"])
-        live = elements.set_index("code")
+        live = pd.DataFrame(snap.boot["elements"]).set_index("code")
         # build_model doesn't depend on the layers: once per snapshot, not per variant
-        inputs = reference.load_model_inputs()
-        inputs["api"], inputs["teams"] = elements, pd.DataFrame(snap.boot["teams"])
-        base_model = build_model(points=DEFAULT_PARAMS.points, **inputs)
+        base_model = base_model_from_bootstrap(snap.boot)
         for name, layers in variants.items():
             pred = _score_variant(snap, gw, layers, past, act, live, base_model)
             rows.append(pred.reset_index().assign(variant=name, gw=gw, snapshot=snap.date))

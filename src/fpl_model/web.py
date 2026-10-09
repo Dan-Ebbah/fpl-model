@@ -3,8 +3,7 @@
 `fpl web` serves a single-page app on localhost. Standard-library HTTP server
 only — this is a single-user local tool, so no framework dependency is
 warranted. The payload builders live in `payloads` (plain functions, testable
-without a server); this module keeps the per-process cache they read from and
-the handler that maps URLs onto them.
+without a server); this module is the handler that maps URLs onto them.
 
 Projections are cached per data source (workbook snapshot vs live pull) for
 the life of the process; the Refresh button re-pulls the live API.
@@ -13,14 +12,12 @@ the life of the process; the Refresh button re-pulls the live API.
 from __future__ import annotations
 
 import json
-import threading
 import webbrowser
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import pandas as pd
 
 from . import payloads
 from .rules import DEFAULT_BENCH_WEIGHT, DEFAULT_FT_VALUE, FIRST_GW, HIT_COST, LAST_GW
@@ -30,30 +27,6 @@ HTML_PATH = Path(__file__).parent / "web.html"
 DEFAULT_PORT = 8765
 DEFAULT_WINDOW_END = 8  # `to` when a query leaves it out (the Player tab uses LAST_GW)
 DEFAULT_TOP = 50  # rows the Predictions tab gets by default
-
-_cache: dict = {}  # refresh flag -> pipeline.Pipeline
-_cache_lock = threading.Lock()
-
-
-def _pipeline(refresh: bool, force: bool = False):
-    """A simple cache for the pipeline: one build per data source, rebuilt on `force`."""
-    from .pipeline import build_pipeline
-
-    with _cache_lock:
-        if force or refresh not in _cache:
-            _cache[refresh] = build_pipeline(refresh=refresh)
-        return _cache[refresh]
-
-
-def _ppts(refresh: bool, force: bool = False) -> pd.DataFrame:
-    return _pipeline(refresh, force).ppts
-
-
-def _prices(refresh: bool) -> pd.Series:
-    from .pipeline import player_prices
-
-    return player_prices(refresh)
-
 
 # ---------------------------------------------------------------------------
 # Routes: query-string dict -> payload. Each parses its own parameters so the
