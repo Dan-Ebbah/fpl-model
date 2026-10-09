@@ -20,6 +20,10 @@ def build_fixture_slots(fixtures: pd.DataFrame, teams: pd.DataFrame) -> pd.DataF
     order; `teams` maps team id -> short_name. Slot numbering follows the
     workbook: a team's fixtures within a gameweek are numbered 1, 2 in list
     order, counting home and away appearances together.
+
+    Columns: team, gw, slot, vs (opponent code, cased by venue), is_home. The
+    `is_home` flag duplicates the case convention for consumers that want a
+    boolean; the PPts port itself reads the venue from the case of `vs`.
     """
     id_to_abrv = dict(zip(teams["id"].astype(int), teams["short_name"]))
 
@@ -47,7 +51,13 @@ def build_fixture_slots(fixtures: pd.DataFrame, teams: pd.DataFrame) -> pd.DataF
 
 
 def opponent_grid(fixture_slots: pd.DataFrame, gws: range, max_slot: int = 2) -> pd.DataFrame:
-    """Dense (team, gw, slot) grid over `gws`, NO_FIXTURE where no game exists."""
+    """Dense (team, gw, slot) grid over `gws`, NO_FIXTURE where no game exists.
+
+    Every team gets `max_slot` rows per gameweek (two covers double gameweeks,
+    and is what every caller uses), so blank slots exist as rows — the PPts
+    sheet carries them too and zeroes their totals. Teams are sorted, so the
+    grid order is (team, gw, slot) ascending.
+    """
     teams = sorted(fixture_slots["team"].unique())
     grid = pd.MultiIndex.from_product(
         [teams, list(gws), range(1, max_slot + 1)], names=["team", "gw", "slot"]
