@@ -7,7 +7,7 @@ import json
 import pandas as pd
 import pytest
 
-from fpl_model import plan, team
+from fpl_model import plan, rules, team
 from fpl_model.optimizer import optimize_squad
 from test_optimizer import toy_players  # rootdir tests/ is on sys.path (rootdir conftest-less layout)
 
@@ -134,7 +134,7 @@ def test_resolve_and_remember_entry(tmp_path, monkeypatch):
 def _owned(players: pd.DataFrame) -> dict[int, float]:
     """A legal but weak 15: the *last* players of each position, sold at price."""
     codes: list[int] = []
-    for pos, n in [("GK", 2), ("DEF", 5), ("MID", 5), ("FWD", 3)]:
+    for pos, n in rules.SQUAD_SHAPE.items():
         codes += list(players[players["POS"] == pos].index[-n:])
     return {c: float(players.loc[c, "price"]) for c in codes}
 
@@ -173,7 +173,7 @@ def test_free_transfer_value_stops_marginal_churn():
     # make every upgrade tiny: flat projections apart from a +0.5 edge for the best of each position
     xp = xp.copy()
     xp[:] = 3.0
-    for pos in ["GK", "DEF", "MID", "FWD"]:
+    for pos in rules.POSITIONS:
         xp.loc[players[players["POS"] == pos].index[0]] = 3.5
     churn = optimize_squad(players, xp, current=owned, bank=50.0, free_transfers=3, ft_value=0.0)
     assert churn.n_transfers >= 1                     # any gain is taken when FTs are free

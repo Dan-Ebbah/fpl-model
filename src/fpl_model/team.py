@@ -27,12 +27,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import api
+from .paths import DATA_DIR
+from .rules import ELEMENT_TYPE_POS, FIRST_HALF_END, MAX_FREE_TRANSFERS, PRICE_UNIT, XI_SIZE
 
-ME_PATH = Path(__file__).resolve().parents[2] / "data" / "me.json"
+ME_PATH = DATA_DIR / "me.json"
 CHIPS = ("wildcard", "freehit", "bboost", "3xc")
-MAX_FREE_TRANSFERS = 5
-FIRST_HALF_END = 19  # chips reset for GW20 onwards
-POS_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 
 
 @dataclass
@@ -85,6 +84,7 @@ class MyTeam:
 
 
 def remember_entry(entry_id: int, path: Path | None = None) -> None:
+    """Save the entry id to `path` (default data/me.json) so later runs need no `--entry`."""
     path = path or ME_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"entry": int(entry_id)}, indent=1))
@@ -110,10 +110,11 @@ def resolve_entry(entry_id: int | None = None, path: Path | None = None) -> int:
 
 def selling_price(purchase: float, now: float) -> float:
     """FPL sell rule: you get purchase + floor(profit / 2), in £0.1m steps."""
-    p, n = round(purchase * 10), round(now * 10)
+    # work in whole tenths so the floor is exact
+    p, n = round(purchase * PRICE_UNIT), round(now * PRICE_UNIT)
     if n <= p:
-        return n / 10
-    return (p + (n - p) // 2) / 10
+        return n / PRICE_UNIT
+    return (p + (n - p) // 2) / PRICE_UNIT
 
 
 def chip_events(history: dict) -> dict[int, str]:
@@ -169,8 +170,14 @@ def purchase_prices(
     for p in picks:
         el = elements[int(p["element"])]
         opening = int(el["now_cost"]) - int(el["cost_change_start"])
-        out[int(p["element"])] = bought.get(int(p["element"]), opening) / 10
+        out[int(p["element"])] = bought.get(int(p["element"]), opening) / PRICE_UNIT
     return out
+
+
+def _chance_of_playing(element: dict) -> float:
+    """The API's percentage flag as a fraction; an unflagged player is 1.0."""
+    chance = element.get("chance_of_playing_next_round")
+    return 1.0 if chance is None else float(chance) / 100
 
 
 def build_team(
@@ -185,20 +192,19 @@ def build_team(
     picks: list[Pick] = []
     for p in sorted(picks_payload["picks"], key=lambda p: p["position"]):
         el = elements[int(p["element"])]
-        now = int(el["now_cost"]) / 10
+        now = int(el["now_cost"]) / PRICE_UNIT
         purchase = paid[int(p["element"])]
-        chance = el.get("chance_of_playing_next_round")
         picks.append(Pick(
             code=int(el["code"]), element=int(el["id"]), name=el["web_name"],
-            team=teams[int(el["team"])], pos=POS_BY_TYPE[int(el["element_type"])],
+            team=teams[int(el["team"])], pos=ELEMENT_TYPE_POS[int(el["element_type"])],
             purchase=purchase, now=now, sell=selling_price(purchase, now),
             is_captain=bool(p["is_captain"]), is_vice=bool(p["is_vice_captain"]),
-            bench_slot=max(0, int(p["position"]) - 11),
+            bench_slot=max(0, int(p["position"]) - XI_SIZE),
             status=el.get("status", "a"),
-            chance=1.0 if chance is None else float(chance) / 100,
+            chance=_chance_of_playing(el),
         ))
 
-    eh = picks_payload.get("entry_history", {})
+    entry_history = picks_payload.get("entry_history", {})
     notes = [
         f"Squad as locked for GW{gw}; transfers or chips already set for GW{next_gw} "
         "are not public until the deadline passes."
@@ -212,7 +218,7 @@ def build_team(
         manager=f"{entry.get('player_first_name', '')} {entry.get('player_last_name', '')}".strip(),
         team_name=entry.get("name", ""),
         gw=gw, next_gw=next_gw, picks=picks,
-        bank=int(eh.get("bank", entry.get("last_deadline_bank", 0) or 0)) / 10,
+        bank=int(entry_history.get("bank", entry.get("last_deadline_bank", 0) or 0)) / PRICE_UNIT,
         free_transfers=free_transfers_after(history, gw),
         chips_used=[{"name": n, "gw": g} for g, n in sorted(chip_events(history).items())],
         chips_available=chips_available(history, next_gw),
