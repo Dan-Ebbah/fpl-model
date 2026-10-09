@@ -17,9 +17,11 @@ from typing import Callable
 import pandas as pd
 
 from . import api
+from .paths import SNAPSHOT_DIR
+from .rules import ELEMENT_TYPE_POS
 
-CACHE_PATH = api.SNAPSHOT_DIR / "matchlog.parquet"
-ELEMENT_TYPE_POS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+CACHE_PATH = SNAPSHOT_DIR / "matchlog.parquet"
+DEFAULT_WORKERS = 8  # concurrent element-summary requests
 COLUMNS = [
     "element", "code", "pos", "fixture", "round", "team", "opponent", "was_home",
     "minutes", "starts", "goals", "assists", "xg", "xa", "xgc", "points", "bonus",
@@ -56,9 +58,19 @@ def load_match_log(
     fixtures_raw: list[dict],
     cache_path: Path | None = CACHE_PATH,
     fetch: Callable[[int], dict] = api.fetch_player_history,
-    workers: int = 8,
+    workers: int = DEFAULT_WORKERS,
 ) -> pd.DataFrame:
-    short = {int(t["id"]): str(t["short_name"]).upper() for t in boot["teams"]}
+    """The season's per-match rows for every player with minutes, via the cache.
+
+    A player's cached rows are reused only while his cached minutes equal the
+    bootstrap total; otherwise his rows are refetched (minutes moved) or
+    dropped (no longer in the bootstrap with minutes — which also clears last
+    season's rows, since element and fixture ids are reused across seasons).
+    The cache is rewritten whenever anything was refetched or dropped; a
+    cache written by an older version (missing a column) is ignored and
+    rebuilt. `cache_path=None` fetches everything and stores nothing.
+    """
+    short = api.team_short_names(boot)
     fixtures = {int(f["id"]): f for f in fixtures_raw if f.get("id") is not None}
 
     cached = pd.DataFrame(columns=COLUMNS)

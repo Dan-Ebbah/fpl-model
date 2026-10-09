@@ -8,20 +8,10 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
+from helpers import LA, strength_table
 
 from fpl_model import inseason
 from fpl_model.config import DEFAULT_PARAMS
-
-LA = 1.5
-
-
-def _strength(att: dict[str, float], dfn: dict[str, float]) -> pd.DataFrame:
-    rows = []
-    for t in att:
-        rows.append({"ABVR": t, "LF xG/90": att[t], "SF xG/90": att[t],
-                     "LF xGC/90": dfn[t], "SF xGC/90": dfn[t], "LFxSF US xGC FIX": dfn[t],
-                     "LF US xGC FIX": dfn[t], "SF US xGC FIX": dfn[t]})
-    return pd.DataFrame(rows)
 
 
 def _boot(team_xg: dict[str, float], team_xgc: dict[str, float]) -> dict:
@@ -35,7 +25,8 @@ def _boot(team_xg: dict[str, float], team_xgc: dict[str, float]) -> dict:
     return {"teams": teams, "elements": elements}
 
 
-def _round_robin(n_teams: int, rounds: int = 1) -> list[dict]:
+def _double_round_robin(n_teams: int, rounds: int = 1) -> list[dict]:
+    """Every team hosts every other once per round: two meetings per pair."""
     fx = []
     for _ in range(rounds):
         for h in range(1, n_teams + 1):
@@ -46,8 +37,8 @@ def _round_robin(n_teams: int, rounds: int = 1) -> list[dict]:
 
 
 def test_team_on_expectation_gets_no_adjustment():
-    ts = _strength({"AAA": 1.5, "BBB": 1.5}, {"AAA": 1.5, "BBB": 1.5})
-    fx = _round_robin(2)  # one home, one away each: home factor nets out
+    ts = strength_table({"AAA": 1.5, "BBB": 1.5}, {"AAA": 1.5, "BBB": 1.5})
+    fx = _double_round_robin(2)  # one home, one away each: home factor nets out
     form = inseason.team_form(_boot({"AAA": 3.0, "BBB": 3.0}, {"AAA": 3.0, "BBB": 3.0}), fx, ts, LA, DEFAULT_PARAMS)
     assert form["att_mult"].tolist() == pytest.approx([1.0, 1.0])
     assert form["def_mult"].tolist() == pytest.approx([1.0, 1.0])
@@ -56,9 +47,9 @@ def test_team_on_expectation_gets_no_adjustment():
 
 def test_form_moves_toward_evidence_but_is_shrunk():
     teams = ["AAA", "BBB", "CCC", "DDD"]
-    ts = _strength(dict.fromkeys(teams, 1.5), dict.fromkeys(teams, 1.5))
+    ts = strength_table(dict.fromkeys(teams, 1.5), dict.fromkeys(teams, 1.5))
     xg = {"AAA": 4.5, "BBB": 9.0, "CCC": 9.0, "DDD": 9.0}  # AAA creating half as much
-    form = inseason.team_form(_boot(xg, dict.fromkeys(teams, 9.0)), _round_robin(4), ts, LA, DEFAULT_PARAMS)
+    form = inseason.team_form(_boot(xg, dict.fromkeys(teams, 9.0)), _double_round_robin(4), ts, LA, DEFAULT_PARAMS)
     a = form.loc["AAA"]
     assert a["att_raw"] < a["att_mult"] < 1.0      # direction right, shrunk toward the prior
     assert form.loc["BBB", "att_mult"] > 1.0       # relative: the rest look better
@@ -69,7 +60,7 @@ def test_form_moves_toward_evidence_but_is_shrunk():
 
 def test_form_is_schedule_adjusted():
     """Conceding a lot to an elite attack is not bad defensive form."""
-    ts = _strength({"TOP": 3.0, "MID": 1.5, "LOW": 1.5}, dict.fromkeys(["TOP", "MID", "LOW"], 1.5))
+    ts = strength_table({"TOP": 3.0, "MID": 1.5, "LOW": 1.5}, dict.fromkeys(["TOP", "MID", "LOW"], 1.5))
     # MID only ever plays TOP, LOW is idle filler to keep the league level sane
     fx = [{"team_h": 2, "team_a": 1, "finished": True}, {"team_h": 1, "team_a": 2, "finished": True}]
     expected_conceded = 3.0 * 1.5 / LA * 2  # what TOP's prior attack predicts over two games
@@ -81,7 +72,7 @@ def test_form_is_schedule_adjusted():
 
 
 def test_unfinished_fixtures_are_ignored():
-    ts = _strength({"AAA": 1.5, "BBB": 1.5}, {"AAA": 1.5, "BBB": 1.5})
+    ts = strength_table({"AAA": 1.5, "BBB": 1.5}, {"AAA": 1.5, "BBB": 1.5})
     fx = [{"team_h": 1, "team_a": 2, "finished": False}]
     form = inseason.team_form(_boot({"AAA": 5.0, "BBB": 0.0}, {"AAA": 0.0, "BBB": 5.0}), fx, ts, LA, DEFAULT_PARAMS)
     assert form["att_mult"].tolist() == [1.0, 1.0]

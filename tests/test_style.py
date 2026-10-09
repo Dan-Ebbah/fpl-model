@@ -5,18 +5,19 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from helpers import LA, strength_table
 
 from fpl_model import matchlog, style
 from fpl_model.pipeline import build_pipeline
 from fpl_model.scorers import scorer_table
 from fpl_model.config import DEFAULT_PARAMS
 
-LA = 1.5
 TEAMS = ["AAA", "BBB", "CCC", "DDD"]
 
 
 def _strength() -> pd.DataFrame:
-    return pd.DataFrame([{"ABVR": t, "LF xG/90": 1.5, "SF xG/90": 1.5, "LF xGC/90": 1.5, "SF xGC/90": 1.5} for t in TEAMS])
+    """Every team at the league average, both ways."""
+    return strength_table(dict.fromkeys(TEAMS, LA), dict.fromkeys(TEAMS, LA))
 
 
 def _log(home_xg: dict[str, float], away_xg: dict[str, float], fwd_share: dict[str, float], rounds: int = 1) -> pd.DataFrame:
