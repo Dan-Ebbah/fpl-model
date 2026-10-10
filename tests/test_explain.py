@@ -18,7 +18,7 @@ def explained():
     best = optimize_squad(select_pool(players, xp.sum(axis=1)), xp)
     codes = [int(c) for c in best.squad.index]  # squad is indexed by Code
     picks = [
-        team.Pick(code=c, element=c, name=players.loc[c, "FPL_Name"], team=players.loc[c, "TEAM"],
+        team.Pick(code=c, name=players.loc[c, "FPL_Name"], team=players.loc[c, "TEAM"],
                   pos=players.loc[c, "POS"], purchase=players.loc[c, "price"],
                   now=players.loc[c, "price"], sell=players.loc[c, "price"])
         for c in codes

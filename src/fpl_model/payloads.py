@@ -121,7 +121,6 @@ def squad_payload(
     xi = first[first["started"]]
     captains = captains_by_gw(sol.lineups)
     return {
-        "status": sol.status,
         "cost": round(sol.cost, 1),
         "expected_points": round(sol.expected_points, 1),
         "squad": json.loads(sol.squad.round(2).to_json(orient="records")),
@@ -178,7 +177,7 @@ def plan_to_json(plan) -> dict:
         "gw": my.gw, "from_gw": plan.from_gw, "to_gw": plan.to_gw,
         "bank": my.bank, "squad_value": my.squad_value,
         "free_transfers": my.free_transfers,
-        "chips_available": my.chips_available, "chips_used": my.chips_used,
+        "chips_available": my.chips_available,
         "warnings": plan.warnings,
         "verdict": plan.verdict,
         "current": json.loads(
@@ -338,7 +337,6 @@ def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
         "window": [from_gw, to_gw],
         "xp": round(float(row["true_pts"]), 1),
         "rank": rank, "pos_rank": pos_rank, "pos_count": n_pos,
-        "value_rank": value_rank,
         "start_pct": round(start_pct, 2),
         "fixtures": fixtures,
         "verdict": sentences,
@@ -415,12 +413,10 @@ _ACTUAL_COLS = {
     "goals_scored": "g", "assists": "a", "expected_goals": "xg",
     "expected_assists": "xa", "expected_goal_involvements": "xgi",
     "expected_goals_conceded": "xgc", "clean_sheets": "cs",
-    "goals_conceded": "gc", "defensive_contribution": "dc", "bonus": "bonus",
-    "bps": "bps", "saves": "saves", "yellow_cards": "yc", "red_cards": "rc",
+    "defensive_contribution": "dc", "bonus": "bonus", "bps": "bps",
     "form": "form", "points_per_game": "ppg", "selected_by_percent": "own",
     "transfers_in_event": "tin", "transfers_out_event": "tout",
-    "cost_change_start": "dprice", "ict_index": "ict", "threat": "threat",
-    "creativity": "creativity", "influence": "influence",
+    "cost_change_start": "dprice", "ict_index": "ict",
 }
 
 # PPts category column -> payload key, in display order
@@ -466,7 +462,7 @@ def track_record(ppts: pd.DataFrame | None = None, path: Path | None = None) -> 
             "start": round(float(r["start_pct"]), 3),
             "xg": round(float(r["exp_goals"]), 3), "xa": round(float(r["exp_assists"]), 3),
             "pts": int(r["points"]), "mins": int(r["minutes"]), "started": bool(r["started"]),
-            "g": int(r["goals"]), "a": int(r["assists"]), "price": float(r["price"]),
+            "g": int(r["goals"]), "a": int(r["assists"]),
         })
     return out
 
@@ -593,16 +589,14 @@ def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -
     for p in my.picks:
         rec = tables["players"].get(p.code)
         squad.append({
-            "code": p.code, "name": p.name, "team": p.team, "pos": p.pos,
-            "purchase": p.purchase, "now": p.now, "sell": p.sell,
-            "captain": p.is_captain, "vice": p.is_vice, "bench_slot": p.bench_slot,
+            "code": p.code, "name": p.name, "pos": p.pos, "sell": p.sell,
             "in_model": rec is not None,
         })
     return {
         "entry": my.entry_id, "manager": my.manager, "team_name": my.team_name,
         "overall_rank": my.overall_rank, "total_points": my.total_points,
-        "gw": my.gw, "from_gw": from_gw, "to_gw": to_gw,
+        "from_gw": from_gw, "to_gw": to_gw,
         "bank": my.bank, "free_transfers": my.free_transfers,
-        "chips_available": my.chips_available, "notes": my.notes,
+        "notes": my.notes,
         "squad": squad, **tables,
     }

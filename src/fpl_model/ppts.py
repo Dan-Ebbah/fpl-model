@@ -17,8 +17,7 @@ Faithful-port notes (kept bug-for-bug until the backtester can judge changes):
 - the home/away multiplier is applied twice on the sub-appearance path
   (inside IF NOT START TOTAL and again on TRUE TOTAL), as in the sheet;
 - the sheet computes an opponent DC adjustment (DC/90 POS2 X) but never uses
-  it, so the port does not compute it at all: `dcscore` and `dc_league_avg`
-  are accepted for interface stability and ignored;
+  it, so the port does not compute it at all;
 - team-code lookups are case-insensitive (Excel MATCH semantics) — the
   lowercase away codes hit the uppercase table keys;
 - home detection is the sheet's `vs == UPPER(vs)`, which also fires on the
@@ -227,8 +226,6 @@ def _assemble_output(
 def compute_ppts(
     model: pd.DataFrame,
     team_strength: pd.DataFrame,
-    dcscore: pd.DataFrame,
-    dc_league_avg: pd.Series,
     fixture_grid: pd.DataFrame,
     league_avg_xg: float,
     league_avg_xgc: float,
@@ -239,10 +236,7 @@ def compute_ppts(
     """Compute expected points per (player, gw, slot).
 
     `team_strength` needs columns ABVR, LF xG/90, SF xG/90, LF xGC/90,
-    SF xGC/90, LFxSF US xGC FIX. `dcscore` (indexed by team ABVR, one column
-    per position group CB..CF) and `dc_league_avg` (its league-average row)
-    are accepted but unused — see the module notes. `manual_start_pct` maps
-    player code -> override.
+    SF xGC/90, LFxSF US xGC FIX. `manual_start_pct` maps player code -> override.
 
     `fixture_adj` is the one deliberate extension point beyond the sheet:
     per (TEAM, vs_key, is_home, POS) multipliers `goal_mult`, `assist_mult`,

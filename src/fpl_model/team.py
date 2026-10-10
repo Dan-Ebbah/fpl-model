@@ -37,7 +37,6 @@ CHIPS = ("wildcard", "freehit", "bboost", "3xc")
 @dataclass
 class Pick:
     code: int
-    element: int
     name: str
     team: str
     pos: str
@@ -47,7 +46,6 @@ class Pick:
     is_captain: bool = False
     is_vice: bool = False
     bench_slot: int = 0  # 0 = started last deadline, 1-4 = bench order
-    status: str = "a"
     chance: float = 1.0
 
 
@@ -195,12 +193,11 @@ def build_team(
         now = int(el["now_cost"]) / PRICE_UNIT
         purchase = paid[int(p["element"])]
         picks.append(Pick(
-            code=int(el["code"]), element=int(el["id"]), name=el["web_name"],
+            code=int(el["code"]), name=el["web_name"],
             team=teams[int(el["team"])], pos=ELEMENT_TYPE_POS[int(el["element_type"])],
             purchase=purchase, now=now, sell=selling_price(purchase, now),
             is_captain=bool(p["is_captain"]), is_vice=bool(p["is_vice_captain"]),
             bench_slot=max(0, int(p["position"]) - XI_SIZE),
-            status=el.get("status", "a"),
             chance=_chance_of_playing(el),
         ))
 

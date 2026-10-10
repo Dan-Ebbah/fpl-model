@@ -105,10 +105,6 @@ class Layers:
     params: InSeasonParams = DEFAULT_INSEASON
     style_params: StyleParams | None = None
 
-    @property
-    def any_inseason(self) -> bool:
-        return self.form or self.rates or self.starts or self.style
-
 
 ALL_LAYERS = Layers()
 PORT_ONLY = Layers(form=False, rates=False, starts=False, style=False)

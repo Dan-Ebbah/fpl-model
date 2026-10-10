@@ -113,9 +113,8 @@ def test_fixture_adj_scales_goals_and_clean_sheets_only_where_told():
     teams["id"] = pd.to_numeric(teams["id"], errors="coerce").astype(int)
     fx = reference.load("FIXTURES")[["event", "team_h", "team_a"]].apply(pd.to_numeric, errors="coerce")
     la_xg, la_xgc = reference.league_average_xg()
-    dcs, dca = reference.load_dcscore()
-    kw = dict(model=reference.load_model(), team_strength=reference.load_team_strength(), dcscore=dcs,
-              dc_league_avg=dca, fixture_grid=opponent_grid(build_fixture_slots(fx, teams), gws=range(1, 3)),
+    kw = dict(model=reference.load_model(), team_strength=reference.load_team_strength(),
+              fixture_grid=opponent_grid(build_fixture_slots(fx, teams), gws=range(1, 3)),
               league_avg_xg=la_xg, league_avg_xgc=la_xgc, params=DEFAULT_PARAMS)
     base = compute_ppts(**kw)
     row = base[(base["POS"] == "FWD") & (base["8"] > 0.5) & (base["VS"].str.len() >= 3)].iloc[0]

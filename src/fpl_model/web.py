@@ -26,7 +26,6 @@ HTML_PATH = Path(__file__).parent / "web.html"
 
 DEFAULT_PORT = 8765
 DEFAULT_WINDOW_END = 8  # `to` when a query leaves it out (the Player tab uses LAST_GW)
-DEFAULT_TOP = 50  # rows the Predictions tab gets by default
 
 # ---------------------------------------------------------------------------
 # Routes: query-string dict -> payload. Each parses its own parameters so the
@@ -56,8 +55,7 @@ def _predictions(q: Query) -> dict:
         _flag(q, "refresh"), q.get("pos") or None,
         q.get("team") or None,
         float(q["max_price"]) if q.get("max_price") else None,
-        q.get("sort", "pts"), int(q.get("top", DEFAULT_TOP)),
-        _flag(q, "force"),
+        q.get("sort", "pts"), force=_flag(q, "force"),
     )
 
 

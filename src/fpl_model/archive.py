@@ -144,7 +144,3 @@ def run(top_n: int = DEFAULT_TOP_N, out_dir: Path | None = None) -> Path:
     print(f"season {season_label(bootstrap)}: cohort {len(cohort)} entries, "
           f"GWs 1-{max(gws)}, {requests_made} new files")
     return season_dir
-
-
-if __name__ == "__main__":
-    run()

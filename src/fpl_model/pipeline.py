@@ -171,12 +171,9 @@ def build_pipeline(
         for code, pct in prior_starts.items():
             manual_start_pct[code] = pct
 
-    dcscore, dc_avg = reference.load_dcscore()
     ppts = compute_ppts(
         model=model,
         team_strength=team_strength,
-        dcscore=dcscore,
-        dc_league_avg=dc_avg,
         fixture_grid=opponent_grid(build_fixture_slots(fixtures, teams), gws=gws),
         league_avg_xg=la_xg,
         league_avg_xgc=la_xgc,

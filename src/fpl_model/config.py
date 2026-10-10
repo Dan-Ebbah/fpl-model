@@ -11,10 +11,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import rules
-
-POSITIONS = rules.POSITIONS  # kept as a name here; the tuple now lives in rules
-
 
 @dataclass(frozen=True)
 class PositionPoints:
@@ -48,9 +44,6 @@ class ControlParams:
     # FDR: long-form (38 GW) vs short-form (6 GW) opponent strength blend (B97/B98)
     fdr_long_form_weight: float = 0.8
 
-    # League-average xG/xGC: previous vs current season blend (B110/B111)
-    league_avg_prev_season_weight: float = 1.0
-
     # FPL assists run ~40% above xA over recent seasons (B65)
     fantasy_assist_boost: float = 0.4
 
@@ -66,10 +59,6 @@ class ControlParams:
     @property
     def fdr_short_form_weight(self) -> float:
         return 1.0 - self.fdr_long_form_weight
-
-    @property
-    def league_avg_this_season_weight(self) -> float:
-        return 1.0 - self.league_avg_prev_season_weight
 
     @property
     def starts_rate_this_season_weight(self) -> float:

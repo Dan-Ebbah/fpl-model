@@ -65,7 +65,6 @@ class SquadSolution:
     expected_points: float  # window xP of the chosen squad/XIs (gross of hits)
     cost: float             # sum of the 15 buy prices — in transfer mode too, so not what you paid
     status: str
-    objective: float = 0.0  # what the solver maximized: xP - hits - ft_value penalty
     transfers_in: list[int] = field(default_factory=list)
     transfers_out: list[int] = field(default_factory=list)
     hit_points: float = 0.0
@@ -256,7 +255,6 @@ def _read_solution(
         expected_points=float(window_points),
         cost=float(squad_df["price"].sum()),
         status=status_name,
-        objective=float(pulp.value(prob.objective)),
         transfers_in=transfers_in,
         transfers_out=transfers_out,
         hit_points=hit_points,

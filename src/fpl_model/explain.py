@@ -298,7 +298,7 @@ def explain_plan(plan: TeamPlan, pipe, prices: pd.Series, ft_value: float = DEFA
     wxp = xp.sum(axis=1)
 
     # alternatives are priced against the reconstructed bank, not any --bank override
-    budget = plan.team.bank if plan.team.bank is not None else 0.0
+    budget = plan.team.bank
     for transfer in plan.transfers:
         transfer["why"] = _transfer_reasons(transfer, plan, pipe, by_code, players, wxp, budget)
 

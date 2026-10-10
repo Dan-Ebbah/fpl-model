@@ -60,7 +60,6 @@ def test_compare_payload():
 @pytest.mark.slow
 def test_squad_payload_legal():
     s = payloads.squad_payload(1, 3, refresh=False, bench_weight=0.1, locks=[], excludes=[])
-    assert s["status"] == "Optimal"
     assert len(s["squad"]) == 15
     assert len(s["xi"]) == 11
     assert len(s["bench"]) == 4

@@ -114,7 +114,7 @@ def snapshot(
 
     # fetch before creating the folder: a failed pull used to leave an empty
     # dated directory behind, which reads as "a snapshot exists" to anything
-    # listing the series (the backtester, load_snapshot)
+    # listing the series (the backtester)
     bootstrap = bootstrap if bootstrap is not None else fetch_bootstrap()
     fixtures = fixtures if fixtures is not None else fetch_fixtures()
     dest.mkdir(parents=True, exist_ok=True)
@@ -124,21 +124,6 @@ def snapshot(
     pd.DataFrame(fixtures).to_parquet(dest / "fixtures.parquet")
     return dest
 
-
-def load_snapshot(date: str | None = None, snap_dir: Path | None = None) -> dict[str, pd.DataFrame]:
-    """Load a stored snapshot (latest by default) as dataframes."""
-    snap_dir = snap_dir or SNAPSHOT_DIR
-    if date is None:
-        dates = sorted(p.name for p in snap_dir.iterdir() if p.is_dir())
-        if not dates:
-            raise FileNotFoundError(f"no snapshots in {snap_dir}; run snapshot() first")
-        date = dates[-1]
-    dest = snap_dir / date
-    return {
-        "players": pd.read_parquet(dest / "players.parquet"),
-        "teams": pd.read_parquet(dest / "teams.parquet"),
-        "fixtures": pd.read_parquet(dest / "fixtures.parquet"),
-    }
 
 
 if __name__ == "__main__":

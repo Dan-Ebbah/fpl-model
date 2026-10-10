@@ -69,15 +69,6 @@ def load_model_inputs() -> dict:
     }
 
 
-def load_dcscore() -> tuple[pd.DataFrame, pd.Series]:
-    """DCSCORE sheet: per-team defensive-contribution rates by position group, and the league-average row.
-
-    Threaded into compute_ppts for interface stability; the port does not use it.
-    """
-    dc = load("DCSCORE").set_index("ABVR")
-    avg = load("DCSCORE_league_avg").iloc[0]
-    return dc, avg
-
 
 def league_average_xg() -> tuple[float, float]:
     """Previous-season league-average xG/90 and xGC/90 (PSTABLE bottom row)."""

@@ -21,13 +21,10 @@ def frozen_ppts() -> pd.DataFrame:
     slots = build_fixture_slots(fixtures, teams)
     grid = opponent_grid(slots, gws=range(1, 39))
     la_xg, la_xgc = reference.league_average_xg()
-    dcscore, dc_avg = reference.load_dcscore()
 
     return compute_ppts(
         model=model,
         team_strength=reference.load_team_strength(),
-        dcscore=dcscore,
-        dc_league_avg=dc_avg,
         fixture_grid=grid,
         league_avg_xg=la_xg,
         league_avg_xgc=la_xgc,
