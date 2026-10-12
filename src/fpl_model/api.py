@@ -16,22 +16,27 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from . import paths
+
 BASE = "https://fantasy.premierleague.com/api"
-SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "data" / "snapshots"
+SNAPSHOT_DIR = paths.SNAPSHOT_DIR
+TIMEOUT_S = 30
+# rate-limited or a server-side hiccup: worth a retry after a backoff
+RETRY_STATUSES = (429, 500, 502, 503)
 
 
 def _get(path: str, retries: int = 4) -> dict | list:
-    # transient TLS/connection drops from the FPL API killed the weekly
-    # launchd run (set -e), so retry connection-level failures too
+    # transient TLS/connection drops from the FPL API used to kill the weekly
+    # launchd run outright, so retry connection-level failures too
     for attempt in range(retries):
         try:
-            r = requests.get(f"{BASE}/{path}", timeout=30)
+            r = requests.get(f"{BASE}/{path}", timeout=TIMEOUT_S)
         except (requests.ConnectionError, requests.Timeout):
             if attempt == retries - 1:
                 raise
             time.sleep(2**attempt)
             continue
-        if r.status_code in (429, 500, 502, 503) and attempt < retries - 1:
+        if r.status_code in RETRY_STATUSES and attempt < retries - 1:
             time.sleep(2**attempt)
             continue
         r.raise_for_status()
@@ -45,7 +50,14 @@ def fetch_bootstrap() -> dict:
 
 
 def fetch_fixtures() -> list[dict]:
+    """Every fixture of the season: gameweek, home/away team ids, kick-off,
+    finished flag and (once played) the match stats."""
     return _get("fixtures/")
+
+
+def team_short_names(boot: dict) -> dict[int, str]:
+    """Bootstrap team id -> upper-case short name (the model's ABVR key)."""
+    return {int(t["id"]): str(t["short_name"]).upper() for t in boot["teams"]}
 
 
 def fetch_player_history(player_id: int) -> dict:
@@ -102,7 +114,7 @@ def snapshot(
 
     # fetch before creating the folder: a failed pull used to leave an empty
     # dated directory behind, which reads as "a snapshot exists" to anything
-    # listing the series (the backtester, load_snapshot)
+    # listing the series (the backtester)
     bootstrap = bootstrap if bootstrap is not None else fetch_bootstrap()
     fixtures = fixtures if fixtures is not None else fetch_fixtures()
     dest.mkdir(parents=True, exist_ok=True)
@@ -112,21 +124,6 @@ def snapshot(
     pd.DataFrame(fixtures).to_parquet(dest / "fixtures.parquet")
     return dest
 
-
-def load_snapshot(date: str | None = None, snap_dir: Path | None = None) -> dict[str, pd.DataFrame]:
-    """Load a stored snapshot (latest by default) as dataframes."""
-    snap_dir = snap_dir or SNAPSHOT_DIR
-    if date is None:
-        dates = sorted(p.name for p in snap_dir.iterdir() if p.is_dir())
-        if not dates:
-            raise FileNotFoundError(f"no snapshots in {snap_dir}; run snapshot() first")
-        date = dates[-1]
-    dest = snap_dir / date
-    return {
-        "players": pd.read_parquet(dest / "players.parquet"),
-        "teams": pd.read_parquet(dest / "teams.parquet"),
-        "fixtures": pd.read_parquet(dest / "fixtures.parquet"),
-    }
 
 
 if __name__ == "__main__":

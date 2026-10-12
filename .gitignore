@@ -10,3 +10,4 @@ data/archive/
 data/me.json
 /infra/bootstrap/.terraform/
 data/weekly.log
+.claude/worktrees/

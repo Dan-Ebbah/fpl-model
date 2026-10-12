@@ -111,7 +111,21 @@ points → planning-window aggregation → squad optimization.
 
 ## Layout
 
-- `src/fpl_model/` — the package
+- `src/fpl_model/` — the package. The model core (`config`, `reference`,
+  `model_build`, `fixtures`, `ppts`, `predict`, `priors`) is the port; the
+  in-season layer (`inseason`, `style`, `matchlog`, `api`) feeds it live
+  evidence; `optimizer`, `team`, `plan`, `explain` turn projections into
+  decisions; `backtest` and `archive` are the evaluation and data-capture
+  side. Glue and presentation:
+  - `pipeline.py` — `build_pipeline`, the one entry point the CLI, web UI and
+    backtester share (inputs → model table → PPts), plus prices and name lookup
+  - `rules.py` — the rules of the game named once (squad shape, transfer
+    market, calendar); `paths.py` — the `data/` tree
+  - `scorers.py` — the anytime scorer / assist table
+  - `cli.py` — argparse and thin commands; `report.py` — the terminal reports
+    they print (squad, team plan, style, backtest)
+  - `web.py` — the HTTP layer; `payloads.py` — the JSON payload builders behind
+    every route, and the per-process projection cache
 - `data/reference/` — frozen values extracted from the workbook; parity fixtures
   for the tests and interim model inputs
 - `docs/formulas/` — the workbook's formulas (one JSON per sheet); the port spec

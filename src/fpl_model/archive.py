@@ -10,7 +10,8 @@ This module archives the overall-league leaders every week:
 - each run backfills any gameweek picks a cohort member is missing, so a
   missed week self-heals on the next run
 - raw JSON is stored per entry under data/archive/<season>/, cheap to keep
-  and exactly what the backtester will replay
+  and the point-in-time record a study of elite squads (or a future
+  backtest of them) would need; nothing reads it back yet
 
 Run weekly (any time after a gameweek finishes):
 
@@ -26,19 +27,22 @@ from pathlib import Path
 
 import requests
 
-from .api import BASE, fetch_bootstrap
+from . import paths
+from .api import BASE, RETRY_STATUSES, TIMEOUT_S, fetch_bootstrap
 
-ARCHIVE_DIR = Path(__file__).resolve().parents[2] / "data" / "archive"
+ARCHIVE_DIR = paths.ARCHIVE_DIR
 OVERALL_LEAGUE = 314
 PAGE_SIZE = 50  # fixed by the API
 REQUEST_GAP_S = 0.25
+DEFAULT_TOP_N = 250  # cohort intake per run: the overall league's top N
+PROGRESS_EVERY = 50  # entries archived between progress lines
 
 
 def _get(path: str, retries: int = 3) -> dict | list | None:
     """GET with backoff; None for 404 (entry gone / GW not played)."""
     for attempt in range(retries):
         try:
-            r = requests.get(f"{BASE}/{path}", timeout=30)
+            r = requests.get(f"{BASE}/{path}", timeout=TIMEOUT_S)
         except (requests.ConnectionError, requests.Timeout):
             if attempt == retries - 1:
                 raise
@@ -46,13 +50,12 @@ def _get(path: str, retries: int = 3) -> dict | list | None:
             continue
         if r.status_code == 404:
             return None
-        if r.status_code in (429, 500, 502, 503):
+        if r.status_code in RETRY_STATUSES:
             time.sleep(2**attempt)
             continue
         r.raise_for_status()
         return r.json()
     r.raise_for_status()
-    return None
 
 
 def season_label(bootstrap: dict) -> str:
@@ -62,6 +65,8 @@ def season_label(bootstrap: dict) -> str:
 
 
 def completed_gws(bootstrap: dict) -> list[int]:
+    """Ids of the gameweeks the API marks finished — the ones whose picks can
+    be archived (a round in progress is not yet settled)."""
     return [e["id"] for e in bootstrap["events"] if e["finished"]]
 
 
@@ -108,7 +113,7 @@ def _archive_entry(entry_id: int, gws: list[int], entries_dir: Path) -> int:
     return fetched
 
 
-def run(top_n: int = 250, out_dir: Path | None = None) -> Path:
+def run(top_n: int = DEFAULT_TOP_N, out_dir: Path | None = None) -> Path:
     """One archive pass: refresh cohort from the overall league, backfill picks."""
     bootstrap = fetch_bootstrap()
     season_dir = (out_dir or ARCHIVE_DIR) / season_label(bootstrap)
@@ -134,12 +139,8 @@ def run(top_n: int = 250, out_dir: Path | None = None) -> Path:
     requests_made = 0
     for i, entry_id in enumerate(cohort, 1):
         requests_made += _archive_entry(int(entry_id), gws, entries_dir)
-        if i % 50 == 0:
+        if i % PROGRESS_EVERY == 0:
             print(f"  {i}/{len(cohort)} entries archived")
     print(f"season {season_label(bootstrap)}: cohort {len(cohort)} entries, "
           f"GWs 1-{max(gws)}, {requests_made} new files")
     return season_dir
-
-
-if __name__ == "__main__":
-    run()

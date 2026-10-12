@@ -3,7 +3,6 @@
 import pandas as pd
 import pytest
 
-from fpl_model import reference
 from fpl_model.optimizer import SquadRules, optimize_squad, select_pool
 
 
@@ -73,13 +72,13 @@ def test_higher_budget_never_scores_worse():
 
 @pytest.mark.slow
 def test_real_data_squad_is_legal():
-    from fpl_model.cli import _prices, build_ppts
+    from fpl_model.pipeline import build_ppts, player_prices
 
     ppts = build_ppts()
     window = ppts[(ppts["gw"] >= 1) & (ppts["gw"] <= 4)]
     xp = window.pivot_table(index="Code", columns="gw", values="TRUE TOTAL", aggfunc="sum")
     players = window.groupby("Code")[["FPL_Name", "TEAM", "POS"]].first().join(
-        _prices(refresh=False).rename("price")
+        player_prices(refresh=False).rename("price")
     )
     players = players[players["price"].notna()]
     pool = select_pool(players, xp.sum(axis=1))

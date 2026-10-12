@@ -5,17 +5,19 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from helpers import LA, strength_table
 
 from fpl_model import matchlog, style
-from fpl_model.cli import build_pipeline, scorer_table
+from fpl_model.pipeline import build_pipeline
+from fpl_model.scorers import scorer_table
 from fpl_model.config import DEFAULT_PARAMS
 
-LA = 1.5
 TEAMS = ["AAA", "BBB", "CCC", "DDD"]
 
 
 def _strength() -> pd.DataFrame:
-    return pd.DataFrame([{"ABVR": t, "LF xG/90": 1.5, "SF xG/90": 1.5, "LF xGC/90": 1.5, "SF xGC/90": 1.5} for t in TEAMS])
+    """Every team at the league average, both ways."""
+    return strength_table(dict.fromkeys(TEAMS, LA), dict.fromkeys(TEAMS, LA))
 
 
 def _log(home_xg: dict[str, float], away_xg: dict[str, float], fwd_share: dict[str, float], rounds: int = 1) -> pd.DataFrame:
@@ -111,9 +113,8 @@ def test_fixture_adj_scales_goals_and_clean_sheets_only_where_told():
     teams["id"] = pd.to_numeric(teams["id"], errors="coerce").astype(int)
     fx = reference.load("FIXTURES")[["event", "team_h", "team_a"]].apply(pd.to_numeric, errors="coerce")
     la_xg, la_xgc = reference.league_average_xg()
-    dcs, dca = reference.load_dcscore()
-    kw = dict(model=reference.load_model(), team_strength=reference.load_team_strength(), dcscore=dcs,
-              dc_league_avg=dca, fixture_grid=opponent_grid(build_fixture_slots(fx, teams), gws=range(1, 3)),
+    kw = dict(model=reference.load_model(), team_strength=reference.load_team_strength(),
+              fixture_grid=opponent_grid(build_fixture_slots(fx, teams), gws=range(1, 3)),
               league_avg_xg=la_xg, league_avg_xgc=la_xgc, params=DEFAULT_PARAMS)
     base = compute_ppts(**kw)
     row = base[(base["POS"] == "FWD") & (base["8"] > 0.5) & (base["VS"].str.len() >= 3)].iloc[0]

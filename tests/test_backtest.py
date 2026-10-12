@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fpl_model import api, backtest as bt, reference
+from fpl_model import backtest as bt, reference
 from fpl_model.inseason import PORT_ONLY
 
 
@@ -38,16 +38,6 @@ def test_load_snapshots_skips_a_failed_pulls_empty_folder(tmp_path):
     snaps = bt.load_snapshots(tmp_path)
     assert [s.date for s in snaps] == ["2026-09-17"]
     assert "stats" not in snaps[0].fixtures[0]
-
-
-def test_failed_snapshot_leaves_no_folder(tmp_path, monkeypatch):
-    def boom():
-        raise ConnectionError("TLS EOF")
-
-    monkeypatch.setattr(api, "fetch_bootstrap", boom)
-    with pytest.raises(ConnectionError):
-        api.snapshot(out_dir=tmp_path)
-    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.fixture(scope="module")

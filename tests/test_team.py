@@ -7,7 +7,7 @@ import json
 import pandas as pd
 import pytest
 
-from fpl_model import plan, team
+from fpl_model import plan, rules, team
 from fpl_model.optimizer import optimize_squad
 from test_optimizer import toy_players  # rootdir tests/ is on sys.path (rootdir conftest-less layout)
 
@@ -134,7 +134,7 @@ def test_resolve_and_remember_entry(tmp_path, monkeypatch):
 def _owned(players: pd.DataFrame) -> dict[int, float]:
     """A legal but weak 15: the *last* players of each position, sold at price."""
     codes: list[int] = []
-    for pos, n in [("GK", 2), ("DEF", 5), ("MID", 5), ("FWD", 3)]:
+    for pos, n in rules.SQUAD_SHAPE.items():
         codes += list(players[players["POS"] == pos].index[-n:])
     return {c: float(players.loc[c, "price"]) for c in codes}
 
@@ -159,12 +159,11 @@ def test_free_transfer_used_and_hits_priced():
     assert hits.n_transfers > 1
     assert hits.hit_points == pytest.approx(4.0 * (hits.n_transfers - 1))
     assert hits.expected_points >= one_ft.expected_points
-    # two free transfers: at least as good a squad, and 4 points cheaper in the objective
+    # two free transfers: at least as good a squad, and 4 points cheaper net of hits
+    # (ft_value=0, so xP - hits is exactly what the solver maximised)
     two_ft = optimize_squad(players, xp, current=owned, bank=bank, free_transfers=2, hit_cost=4.0, ft_value=0.0)
     assert two_ft.n_transfers >= hits.n_transfers
-    assert two_ft.objective >= hits.objective + 4.0 - 1e-9
-    # expected_points is raw window xP; objective nets off hits and the FT value
-    assert hits.expected_points - hits.hit_points >= hits.objective - 1e-9
+    assert two_ft.expected_points - two_ft.hit_points >= hits.expected_points - hits.hit_points + 4.0 - 1e-9
 
 
 def test_free_transfer_value_stops_marginal_churn():
@@ -173,7 +172,7 @@ def test_free_transfer_value_stops_marginal_churn():
     # make every upgrade tiny: flat projections apart from a +0.5 edge for the best of each position
     xp = xp.copy()
     xp[:] = 3.0
-    for pos in ["GK", "DEF", "MID", "FWD"]:
+    for pos in rules.POSITIONS:
         xp.loc[players[players["POS"] == pos].index[0]] = 3.5
     churn = optimize_squad(players, xp, current=owned, bank=50.0, free_transfers=3, ft_value=0.0)
     assert churn.n_transfers >= 1                     # any gain is taken when FTs are free
@@ -206,7 +205,7 @@ def test_current_player_missing_from_pool_is_an_error():
 def _fake_team(players: pd.DataFrame, next_gw: int = 1) -> team.MyTeam:
     owned = _owned(players)
     picks = [
-        team.Pick(code=c, element=c, name=players.loc[c, "FPL_Name"], team=players.loc[c, "TEAM"],
+        team.Pick(code=c, name=players.loc[c, "FPL_Name"], team=players.loc[c, "TEAM"],
                   pos=players.loc[c, "POS"], purchase=v, now=v, sell=v)
         for c, v in owned.items()
     ]

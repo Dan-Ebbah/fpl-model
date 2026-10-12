@@ -28,9 +28,12 @@ import numpy as np
 import pandas as pd
 
 from .config import ControlParams
+from .inseason import prior_strength, safe_ratio, strength_by_abvr
+from .rules import MINUTES_PER_MATCH, OUTFIELD, POSITIONS
 
-OUTFIELD = ["DEF", "MID", "FWD"]
-POSITIONS = ["GK", "DEF", "MID", "FWD"]
+# a shrunk venue tilt t becomes t**+½ at home and t**-½ away, so the two
+# factors multiply to 1: style moves points between venues, form owns the level
+EVEN_SPLIT = 0.5
 
 
 @dataclass(frozen=True)
@@ -67,14 +70,31 @@ def _team_matches(log: pd.DataFrame) -> pd.DataFrame:
     return own.merge(against, on=["team", "fixture"], how="left").fillna({"xga": 0.0})
 
 
+def _tilt(h: pd.DataFrame, a: pd.DataFrame, act: str, exp: str, league_adj: float, lo: float, hi: float) -> float:
+    """Home over away of (actual / expected) for one team, `league_adj` taking
+    out the league-wide tilt, clipped; 1.0 when either venue has no evidence."""
+    if not len(h) or not len(a) or min(h[exp].sum(), a[exp].sum(), h[act].sum(), a[act].sum()) <= 0:
+        return 1.0
+    t = (h[act].sum() / h[exp].sum()) / (a[act].sum() / a[exp].sum())
+    return float(np.clip(t * league_adj, lo, hi))
+
+
 def venue_tilt(
     log: pd.DataFrame, team_strength: pd.DataFrame, league_avg_xgc: float,
     control: ControlParams, params: StyleParams = DEFAULT_STYLE,
 ) -> pd.DataFrame:
-    ts = team_strength.set_index(team_strength["ABVR"].str.upper())
-    w_lf, w_sf = control.fdr_long_form_weight, control.fdr_short_form_weight
-    att = w_lf * ts["LF xG/90"] + w_sf * ts["SF xG/90"]
-    dfn = w_lf * ts["LF xGC/90"] + w_sf * ts["SF xGC/90"]
+    """Per-team home/away multipliers on attack and on goals conceded, indexed
+    like the strength table (every team present; 1.0 and zero games when the
+    log has none of its matches).
+
+    A team's tilt is how much better its actual-over-expected xG (xGA) is at
+    home than away, relative to the league's own tilt this season, shrunk
+    toward 1.0 with `venue_prior_games` and split evenly between the venues
+    so att_home * att_away == 1. Columns: home_games, away_games,
+    att_tilt_raw, def_tilt_raw, att_home, att_away, def_home, def_away.
+    """
+    ts = strength_by_abvr(team_strength)
+    att, dfn = prior_strength(ts, control)
 
     tm = _team_matches(log)
     tm = tm[tm["team"].isin(ts.index) & tm["opponent"].isin(ts.index)].copy()
@@ -95,20 +115,14 @@ def venue_tilt(
         h, a = g[g["home"]], g[~g["home"]]
         n = 2 * min(len(h), len(a))  # a split needs both halves
         w = n / (n + params.venue_prior_games)
-
-        def tilt(act: str, exp: str, invert: bool) -> float:
-            if not len(h) or not len(a) or min(h[exp].sum(), a[exp].sum(), h[act].sum(), a[act].sum()) <= 0:
-                return 1.0
-            t = (h[act].sum() / h[exp].sum()) / (a[act].sum() / a[exp].sum())
-            return float(np.clip(t * (league_tilt if invert else 1 / league_tilt), lo, hi))
-
-        att_raw, def_raw = tilt("xg", "exp_xg", False), tilt("xga", "exp_xga", True)
-        # split the shrunk tilt evenly so a team's home and away factors
-        # multiply to 1: style moves points between venues, form owns the level
+        # the league tilt is divided out of attack and, mirrored, multiplied into defence
+        att_raw = _tilt(h, a, "xg", "exp_xg", 1 / league_tilt, lo, hi)
+        def_raw = _tilt(h, a, "xga", "exp_xga", league_tilt, lo, hi)
         a_t, d_t = att_raw ** w, def_raw ** w
         rows[team] = {
             "home_games": len(h), "away_games": len(a), "att_tilt_raw": att_raw, "def_tilt_raw": def_raw,
-            "att_home": a_t ** 0.5, "att_away": a_t ** -0.5, "def_home": d_t ** 0.5, "def_away": d_t ** -0.5,
+            "att_home": a_t ** EVEN_SPLIT, "att_away": a_t ** -EVEN_SPLIT,
+            "def_home": d_t ** EVEN_SPLIT, "def_away": d_t ** -EVEN_SPLIT,
         }
     out = pd.DataFrame.from_dict(rows, orient="index")
     return out.reindex(ts.index).fillna({c: 1.0 for c in ["att_tilt_raw", "def_tilt_raw", "att_home", "att_away", "def_home", "def_away"]}).fillna(0)
@@ -134,9 +148,9 @@ def _channels(log: pd.DataFrame, by: str, k: float) -> tuple[pd.DataFrame, pd.Da
     shrunk = raw.mul(n, axis=0).add(lshare * k).div(n + k, axis=0)
     shrunk = shrunk / shrunk.groupby(level=0).transform("sum")
     # players of this position on the pitch at once
-    league_slots = league["minutes"] / (90 * games.sum())
+    league_slots = league["minutes"] / (MINUTES_PER_MATCH * games.sum())
     lslots = pd.Series(idx.get_level_values(1).map(league_slots).values, index=idx)
-    slots = (tot["minutes"] / 90 + lslots * k) / (n + k)
+    slots = (tot["minutes"] / MINUTES_PER_MATCH + lslots * k) / (n + k)
     out = pd.DataFrame({
         "games": n, "xg_share_raw": raw["xg"], "xa_share_raw": raw["xa"],
         "xg_share": shrunk["xg"], "xa_share": shrunk["xa"], "slots": slots,
@@ -155,11 +169,11 @@ def team_style(
     lg = league.reindex(attack.index.get_level_values("pos")).set_axis(attack.index)
     with np.errstate(divide="ignore", invalid="ignore"):
         # per-player norm relative to the league's: (share / slots) over the same for the league
-        attack["goal_rel"] = ((attack["xg_share"] / attack["slots"]) / (lg["xg_share"] / lg["slots"])).replace([np.inf, -np.inf], np.nan).fillna(1.0)
-        attack["assist_rel"] = ((attack["xa_share"] / attack["slots"]) / (lg["xa_share"] / lg["slots"])).replace([np.inf, -np.inf], np.nan).fillna(1.0)
+        attack["goal_rel"] = safe_ratio((attack["xg_share"] / attack["slots"]) / (lg["xg_share"] / lg["slots"]), 1.0)
+        attack["assist_rel"] = safe_ratio((attack["xa_share"] / attack["slots"]) / (lg["xa_share"] / lg["slots"]), 1.0)
         lc = league.reindex(concede.index.get_level_values("pos")).set_axis(concede.index)
-        concede["goal_mult"] = (concede["xg_share"] / lc["xg_share"]).replace([np.inf, -np.inf], np.nan).fillna(1.0)
-        concede["assist_mult"] = (concede["xa_share"] / lc["xa_share"]).replace([np.inf, -np.inf], np.nan).fillna(1.0)
+        concede["goal_mult"] = safe_ratio(concede["xg_share"] / lc["xg_share"], 1.0)
+        concede["assist_mult"] = safe_ratio(concede["xa_share"] / lc["xa_share"], 1.0)
     for frame, cols in [(attack, ["goal_rel", "assist_rel"]), (concede, ["goal_mult", "assist_mult"])]:
         frame[cols] = frame[cols].clip(*params.channel_clip)
     return TeamStyle(

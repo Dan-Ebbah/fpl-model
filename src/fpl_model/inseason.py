@@ -34,11 +34,17 @@ data layer removes it.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
+from .api import team_short_names
 from .config import ControlParams, PositionPoints
+from .rules import MINUTES_PER_MATCH
+
+if TYPE_CHECKING:
+    from .style import StyleParams
 
 XG_COLS = ["LF xG/90", "SF xG/90"]
 XGC_COLS = ["LF xGC/90", "SF xGC/90", "LFxSF US xGC FIX", "LF US xGC FIX", "SF US xGC FIX"]
@@ -46,6 +52,12 @@ XGC_COLS = ["LF xGC/90", "SF xGC/90", "LFxSF US xGC FIX", "LF US xGC FIX", "SF U
 # a position group needs this many prior minutes behind its mean, else fall
 # back to the broader FPL position (RM/LM have a handful of players)
 MIN_GROUP_MINS = 5000.0
+# the start-rate pseudo-games sit at a coin flip: no view either way
+COIN_FLIP = 0.5
+# team_form re-estimates opponents' strengths while measuring form against
+# them; this many passes of the fixed point, which settles almost immediately
+FORM_ITERATIONS = 3
+GK_ELEMENT_TYPE = 1  # API element_type of a goalkeeper
 
 
 @dataclass(frozen=True)
@@ -79,9 +91,10 @@ DEFAULT_INSEASON = InSeasonParams()
 class Layers:
     """Which live-path adjustments run, and with what constants.
 
-    The backtester's unit of comparison: every switch and every constant the
-    live pipeline uses is here, so a variant is just another Layers value.
-    `style_params` is typed loosely to keep this module free of a style import.
+    The backtester's unit of comparison: a variant is just another Layers
+    value, with its switches and its `InSeasonParams`/`StyleParams`. The
+    module-level constants (`MIN_GROUP_MINS`, `COIN_FLIP`, `FORM_ITERATIONS`)
+    are structural and not swept per variant.
     """
 
     form: bool = True
@@ -90,11 +103,7 @@ class Layers:
     style: bool = True
     priors: bool = True          # data/priors.yaml — today's judgment; off when replaying the past
     params: InSeasonParams = DEFAULT_INSEASON
-    style_params: object | None = None
-
-    @property
-    def any_inseason(self) -> bool:
-        return self.form or self.rates or self.starts or self.style
+    style_params: StyleParams | None = None
 
 
 ALL_LAYERS = Layers()
@@ -103,6 +112,76 @@ PORT_ONLY = Layers(form=False, rates=False, starts=False, style=False)
 
 def _num(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce").fillna(0.0)
+
+
+def safe_ratio(ratio: pd.Series, fill: float) -> pd.Series:
+    """A ratio with its x/0 (inf) and 0/0 (NaN) cases replaced by `fill`."""
+    return ratio.replace([np.inf, -np.inf], np.nan).fillna(fill)
+
+
+def _elements_by_code(api: pd.DataFrame) -> pd.DataFrame:
+    """The bootstrap players table indexed by integer code (first row per code)."""
+    return api.assign(_code=_num(api["code"]).astype(int)).drop_duplicates("_code").set_index("_code")
+
+
+def strength_by_abvr(team_strength: pd.DataFrame) -> pd.DataFrame:
+    """The team strength table indexed by upper-case ABVR."""
+    return team_strength.set_index(team_strength["ABVR"].str.upper())
+
+
+def prior_strength(ts: pd.DataFrame, control: ControlParams) -> tuple[pd.Series, pd.Series]:
+    """Pre-season attack (xG/90) and defence (xGC/90) per team: the CONTROL
+    long-form/short-form blend, on a table from `strength_by_abvr`."""
+    w_lf, w_sf = control.fdr_long_form_weight, control.fdr_short_form_weight
+    att = w_lf * ts["LF xG/90"] + w_sf * ts["SF xG/90"]
+    dfn = w_lf * ts["LF xGC/90"] + w_sf * ts["SF xGC/90"]
+    return att, dfn
+
+
+def _season_totals(boot: dict, short: dict[int, str]) -> tuple[pd.Series, pd.Series]:
+    """This season's xG for (every player) and xGC against (goalkeepers only),
+    summed per team short name."""
+    el = pd.DataFrame(boot["elements"])
+    el["T"] = _num(el["team"]).astype(int).map(short)
+    xg = _num(el["expected_goals"]).groupby(el["T"]).sum()
+    gk = el[_num(el["element_type"]) == GK_ELEMENT_TYPE]
+    xgc = _num(gk["expected_goals_conceded"]).groupby(gk["T"]).sum()
+    return xg, xgc
+
+
+def _played_fixtures(fixtures_raw: list[dict], short: dict[int, str]) -> list[tuple[str, str]]:
+    """(home, away) short names of every finished fixture between known teams."""
+    return [
+        (short[int(f["team_h"])], short[int(f["team_a"])])
+        for f in fixtures_raw
+        if f.get("finished") and f.get("team_h") in short and f.get("team_a") in short
+    ]
+
+
+def _expected_xg(
+    played: list[tuple[str, str]],
+    teams: list[str],
+    prior_att: pd.Series,
+    prior_def: pd.Series,
+    att: pd.Series,
+    dfn: pd.Series,
+    league_avg_xgc: float,
+    home_xg_factor: float,
+) -> tuple[pd.Series, pd.Series]:
+    """xG for and against each team was expected to produce over the fixtures
+    it played, at the current strength estimates (prior x multiplier)."""
+    exp_xg = pd.Series(0.0, index=teams)
+    exp_xgc = pd.Series(0.0, index=teams)
+    for h, a in played:
+        if h not in att.index or a not in att.index:
+            continue
+        h_xg = prior_att[h] * att[h] * prior_def[a] * dfn[a] / league_avg_xgc * home_xg_factor
+        a_xg = prior_att[a] * att[a] * prior_def[h] * dfn[h] / league_avg_xgc * (2 - home_xg_factor)
+        exp_xg[h] += h_xg
+        exp_xgc[a] += h_xg
+        exp_xg[a] += a_xg
+        exp_xgc[h] += a_xg
+    return exp_xg, exp_xgc
 
 
 def team_form(
@@ -118,23 +197,12 @@ def team_form(
     att_mult > 1: creating more than the prior predicted against these
     opponents. def_mult > 1: conceding more (worse defence).
     """
-    ts = team_strength.set_index(team_strength["ABVR"].str.upper())
-    w_lf, w_sf = control.fdr_long_form_weight, control.fdr_short_form_weight
-    prior_att = w_lf * ts["LF xG/90"] + w_sf * ts["SF xG/90"]
-    prior_def = w_lf * ts["LF xGC/90"] + w_sf * ts["SF xGC/90"]
+    ts = strength_by_abvr(team_strength)
+    prior_att, prior_def = prior_strength(ts, control)
 
-    short = {int(t["id"]): str(t["short_name"]).upper() for t in boot["teams"]}
-    el = pd.DataFrame(boot["elements"])
-    el["T"] = _num(el["team"]).astype(int).map(short)
-    xg = _num(el["expected_goals"]).groupby(el["T"]).sum()
-    gk = el[_num(el["element_type"]) == 1]
-    xgc = _num(gk["expected_goals_conceded"]).groupby(gk["T"]).sum()
-
-    played = [
-        (short[int(f["team_h"])], short[int(f["team_a"])])
-        for f in fixtures_raw
-        if f.get("finished") and f.get("team_h") in short and f.get("team_a") in short
-    ]
+    short = team_short_names(boot)
+    xg, xgc = _season_totals(boot, short)
+    played = _played_fixtures(fixtures_raw, short)
     teams = [t for t in ts.index if t in set(short.values())]
     games = pd.Series({t: sum(t in g for g in played) for t in teams}, dtype=float)
 
@@ -142,22 +210,12 @@ def team_form(
     dfn = pd.Series(1.0, index=teams)
     lo, hi = params.ratio_clip
     k = params.team_prior_games
-    exp_xg = exp_xgc = pd.Series(0.0, index=teams)
-    att_target, def_target = att, dfn
     # opponents' strengths are themselves being re-estimated, so iterate the
     # expectation a few times; it settles almost immediately
-    for _ in range(3):
-        exp_xg = pd.Series(0.0, index=teams)
-        exp_xgc = pd.Series(0.0, index=teams)
-        for h, a in played:
-            if h not in att.index or a not in att.index:
-                continue
-            h_xg = prior_att[h] * att[h] * prior_def[a] * dfn[a] / league_avg_xgc * params.home_xg_factor
-            a_xg = prior_att[a] * att[a] * prior_def[h] * dfn[h] / league_avg_xgc * (2 - params.home_xg_factor)
-            exp_xg[h] += h_xg
-            exp_xgc[a] += h_xg
-            exp_xg[a] += a_xg
-            exp_xgc[h] += a_xg
+    for _ in range(FORM_ITERATIONS):
+        exp_xg, exp_xgc = _expected_xg(
+            played, teams, prior_att, prior_def, att, dfn, league_avg_xgc, params.home_xg_factor
+        )
         act_xg = xg.reindex(teams).fillna(0.0)
         act_xgc = xgc.reindex(teams).fillna(0.0)
         # league-level drift (scoring environment, xG provider) is not form:
@@ -165,8 +223,8 @@ def team_form(
         level_att = act_xg.sum() / exp_xg.sum() if exp_xg.sum() > 0 else 1.0
         level_def = act_xgc.sum() / exp_xgc.sum() if exp_xgc.sum() > 0 else 1.0
         with np.errstate(divide="ignore", invalid="ignore"):
-            att_ratio = (act_xg / exp_xg / level_att).replace([np.inf, -np.inf], np.nan).fillna(1.0)
-            def_ratio = (act_xgc / exp_xgc / level_def).replace([np.inf, -np.inf], np.nan).fillna(1.0)
+            att_ratio = safe_ratio(act_xg / exp_xg / level_att, 1.0)
+            def_ratio = safe_ratio(act_xgc / exp_xgc / level_def, 1.0)
         # the ratios are measured against the *current* estimate; fold them in
         att_target = (att * att_ratio).clip(lo, hi)
         def_target = (dfn * def_ratio).clip(lo, hi)
@@ -176,7 +234,7 @@ def team_form(
     return pd.DataFrame({
         "games": games, "xg": xg.reindex(teams).fillna(0.0), "xgc": xgc.reindex(teams).fillna(0.0),
         "exp_xg": exp_xg, "exp_xgc": exp_xgc,
-        "att_raw": (att_target).round(4), "def_raw": (def_target).round(4),
+        "att_raw": att_target.round(4), "def_raw": def_target.round(4),
         "att_mult": att, "def_mult": dfn,
     })
 
@@ -231,7 +289,7 @@ def adjust_player_rates(
     to blend, and a mean rate would hand phantom points to non-players.
     """
     m = model.copy()
-    by_code = api.assign(_code=_num(api["code"]).astype(int)).drop_duplicates("_code").set_index("_code")
+    by_code = _elements_by_code(api)
 
     def cur(col: str) -> pd.Series:
         return m["Code"].map(_num(by_code[col])).fillna(0.0) if col in by_code else pd.Series(0.0, index=m.index)
@@ -249,8 +307,8 @@ def adjust_player_rates(
         ("7", "xA90", "expected_assists", pd.Series(points.assist, index=m.index), "assist_rel"),
     ]:
         with np.errstate(divide="ignore", invalid="ignore"):
-            prior90 = (_num(m[col]) / pts / blend).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-            season90 = (cur(season_col) / cur_mins * 90).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            prior90 = safe_ratio(_num(m[col]) / pts / blend, 0.0)
+            season90 = safe_ratio(cur(season_col) / cur_mins * MINUTES_PER_MATCH, 0.0)
         mu = _group_means(prior90, prior_mins, m["POS"], m["POS2"])
         if team_attack_rel is not None:
             mu = mu * m["TEAM"].str.upper().map(team_attack_rel).fillna(1.0)
@@ -265,9 +323,10 @@ def adjust_player_rates(
 
 
 def team_attack_relative(team_strength: pd.DataFrame, league_avg_xg: float, control: ControlParams) -> pd.Series:
-    ts = team_strength.set_index(team_strength["ABVR"].str.upper())
-    blend = control.fdr_long_form_weight * ts["LF xG/90"] + control.fdr_short_form_weight * ts["SF xG/90"]
-    return blend / league_avg_xg
+    """Each team's prior attack (xG/90) over the league average, indexed by
+    ABVR: the scale on the position-group norm in `adjust_player_rates`."""
+    att, _ = prior_strength(strength_by_abvr(team_strength), control)
+    return att / league_avg_xg
 
 
 def adjust_start_rates(
@@ -292,7 +351,7 @@ def adjust_start_rates(
     columns so compute_ppts' season weights can't undo it.
     """
     m = model.copy()
-    by_code = api.assign(_code=_num(api["code"]).astype(int)).drop_duplicates("_code").set_index("_code")
+    by_code = _elements_by_code(api)
     starts = m["Code"].map(_num(by_code["starts"])).fillna(0.0)
     mins = m["Code"].map(_num(by_code["minutes"])).fillna(0.0)
     games = m["TEAM"].str.upper().map(form["games"]).fillna(0.0)
@@ -300,7 +359,7 @@ def adjust_start_rates(
     ps_rate = _num(m["PS Sts/SqdsMd"])
     ps_games = (_num(m["PS Starts"]) + _num(m["PS Subs"]) + _num(m["PS UnSub"])).clip(upper=params.start_prior_max_games)
     w, k = params.current_season_weight, params.start_pseudo_games
-    blended = (ps_rate * ps_games + 0.5 * k + w * starts.clip(upper=games)) / (ps_games + k + w * games)
+    blended = (ps_rate * ps_games + COIN_FLIP * k + w * starts.clip(upper=games)) / (ps_games + k + w * games)
     touch = (mins > 0) & (games > 0)
     # no status column (synthetic inputs): can't tell fit from injured, so leave alone
     status = m["Code"].map(by_code["status"]) if "status" in by_code else pd.Series("", index=m.index)

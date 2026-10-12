@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import datetime as dt
 
+import pandas as pd
+import pytest
+
 from fpl_model import api
 
 
@@ -20,9 +23,18 @@ def test_snapshot_persists_prefetched_data(tmp_path):
     for f in ["bootstrap.json", "players.parquet", "teams.parquet", "fixtures.parquet"]:
         assert (dest / f).exists()
 
-    loaded = api.load_snapshot(snap_dir=tmp_path)
-    assert loaded["players"].iloc[0]["code"] == 1
-    assert loaded["fixtures"].iloc[0]["event"] == 1
+    assert pd.read_parquet(dest / "players.parquet").iloc[0]["code"] == 1
+    assert pd.read_parquet(dest / "fixtures.parquet").iloc[0]["event"] == 1
 
     # same-day re-snapshot overwrites in place rather than duplicating
     assert api.snapshot(out_dir=tmp_path, bootstrap=bootstrap, fixtures=fixtures) == dest
+
+
+def test_failed_snapshot_leaves_no_folder(tmp_path, monkeypatch):
+    def boom():
+        raise ConnectionError("TLS EOF")
+
+    monkeypatch.setattr(api, "fetch_bootstrap", boom)
+    with pytest.raises(ConnectionError):
+        api.snapshot(out_dir=tmp_path)
+    assert list(tmp_path.iterdir()) == []

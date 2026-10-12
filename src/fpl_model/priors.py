@@ -27,11 +27,13 @@ import pandas as pd
 import yaml
 
 from .config import PositionPoints
+from .paths import DATA_DIR
 
-PRIORS_PATH = Path(__file__).resolve().parents[2] / "data" / "priors.yaml"
+PRIORS_PATH = DATA_DIR / "priors.yaml"
 
 
 def load_priors(path: Path = PRIORS_PATH) -> list[dict]:
+    """The `players` entries of the priors YAML; [] when the file is absent or empty."""
     if not path.exists():
         return []
     data = yaml.safe_load(path.read_text()) or {}
@@ -54,12 +56,11 @@ def apply_priors(
     start_overrides: dict[int, float] = {}
     for entry in priors:
         name = str(entry["player"])
-        hits = model[
-            model["FPL_Name"].str.contains(name, case=False, na=False)
-            | model["web_name"].str.contains(name, case=False, na=False)
-        ] if "web_name" in model.columns else model[
-            model["FPL_Name"].str.contains(name, case=False, na=False)
-        ]
+        # match on FPL_Name, and on web_name too when the frame carries it
+        mask = model["FPL_Name"].str.contains(name, case=False, na=False)
+        if "web_name" in model.columns:
+            mask = mask | model["web_name"].str.contains(name, case=False, na=False)
+        hits = model[mask]
         if hits.empty:
             print(f"priors: no player matching {name!r} — skipped", file=sys.stderr)
             continue

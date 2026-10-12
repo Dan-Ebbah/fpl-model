@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+SLOTS_PER_GW = 2  # fixture slots per team per gameweek: a double gameweek fills both
 NO_FIXTURE = "-"
 
 
@@ -20,6 +21,9 @@ def build_fixture_slots(fixtures: pd.DataFrame, teams: pd.DataFrame) -> pd.DataF
     order; `teams` maps team id -> short_name. Slot numbering follows the
     workbook: a team's fixtures within a gameweek are numbered 1, 2 in list
     order, counting home and away appearances together.
+
+    Columns: team, gw, slot, vs (opponent code, cased by venue: uppercase at
+    home, lowercase away — the PPts port reads the venue from the case).
     """
     id_to_abrv = dict(zip(teams["id"].astype(int), teams["short_name"]))
 
@@ -40,19 +44,23 @@ def build_fixture_slots(fixtures: pd.DataFrame, teams: pd.DataFrame) -> pd.DataF
                     "gw": gw,
                     "slot": slot,
                     "vs": opponent if is_home else opponent.lower(),
-                    "is_home": is_home,
                 }
             )
     return pd.DataFrame(rows)
 
 
-def opponent_grid(fixture_slots: pd.DataFrame, gws: range, max_slot: int = 2) -> pd.DataFrame:
-    """Dense (team, gw, slot) grid over `gws`, NO_FIXTURE where no game exists."""
+def opponent_grid(fixture_slots: pd.DataFrame, gws: range) -> pd.DataFrame:
+    """Dense (team, gw, slot) grid over `gws`, NO_FIXTURE where no game exists.
+
+    Every team gets `SLOTS_PER_GW` rows per gameweek (two covers double
+    gameweeks), so blank slots exist as rows — the PPts
+    sheet carries them too and zeroes their totals. Teams are sorted, so the
+    grid order is (team, gw, slot) ascending.
+    """
     teams = sorted(fixture_slots["team"].unique())
     grid = pd.MultiIndex.from_product(
-        [teams, list(gws), range(1, max_slot + 1)], names=["team", "gw", "slot"]
+        [teams, list(gws), range(1, SLOTS_PER_GW + 1)], names=["team", "gw", "slot"]
     ).to_frame(index=False)
     grid = grid.merge(fixture_slots, on=["team", "gw", "slot"], how="left")
     grid["vs"] = grid["vs"].fillna(NO_FIXTURE)
-    grid["is_home"] = grid["is_home"].fillna(False)
     return grid
