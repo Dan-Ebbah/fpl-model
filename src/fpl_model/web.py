@@ -80,14 +80,14 @@ def _team(q: Query) -> dict:
 def _compare(q: Query) -> dict:
     return payloads.compare_payload(
         q.get("a", ""), q.get("b", ""), int(q.get("from", FIRST_GW)),
-        int(q.get("to", DEFAULT_WINDOW_END)), _flag(q, "refresh"),
+        int(q.get("to", DEFAULT_WINDOW_END)), _flag(q, "refresh"), _flag(q, "force"),
     )
 
 
 def _verdict(q: Query) -> dict:
     return payloads.verdict_payload(
         q.get("name", ""), int(q.get("from", FIRST_GW)),
-        int(q.get("to", DEFAULT_WINDOW_END)), _flag(q, "refresh"),
+        int(q.get("to", DEFAULT_WINDOW_END)), _flag(q, "refresh"), _flag(q, "force"),
     )
 
 
@@ -98,7 +98,7 @@ def _sandbox(q: Query) -> dict:
 def _player(q: Query) -> dict:
     return payloads.player_payload(
         q.get("name", ""), int(q.get("from", FIRST_GW)),
-        int(q.get("to", LAST_GW)), _flag(q, "refresh"),
+        int(q.get("to", LAST_GW)), _flag(q, "refresh"), _flag(q, "force"),
     )
 
 

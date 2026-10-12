@@ -172,7 +172,8 @@ this season's actual numbers from the FPL API (minutes, starts, xGI, defensive
 contribution, bonus, ownership, price moves, set-piece duty), his club's
 schedule-adjusted form, and a swap list of every player in his position
 ranked by xP with the delta, filtered to what you can afford. Swaps update the
-window xP, net gain, transfers used, hit cost and bank instantly; `Reset
+window xP, net gain, transfers used, hit cost (editable, or tick wildcard) and
+bank instantly; `Reset
 squad` goes back. `/#sandbox/Tarkowski` deep-links to a player. Every player
 detail (Sandbox and Player tabs) also carries a **track record**: for each
 finished gameweek, the xP the model gave him from the last snapshot stored

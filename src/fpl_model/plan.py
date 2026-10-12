@@ -43,6 +43,7 @@ class TeamPlan:
     transfers: list[dict]
     xi: pd.DataFrame             # next-GW starters of the proposal, captain/vice flagged
     bench: pd.DataFrame          # next-GW bench in recommended order
+    bank: float                  # the bank the plan was priced against (a --bank override, else reconstructed)
     bank_after: float
     warnings: list[str] = field(default_factory=list)
     verdict: list[str] = field(default_factory=list)  # filled by explain.explain_plan
@@ -214,7 +215,7 @@ def plan_transfers(
     plan = TeamPlan(
         team=team, from_gw=from_gw, to_gw=to_gw, current=current,
         baseline=baseline, proposal=proposal, transfers=transfers,
-        xi=xi, bench=bench, bank_after=bank_after, warnings=warnings,
+        xi=xi, bench=bench, bank=bank, bank_after=bank_after, warnings=warnings,
     )
     plan.warnings.extend(_plan_warnings(plan, ft, wildcard))
     return plan

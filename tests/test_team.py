@@ -234,6 +234,9 @@ def test_plan_transfers_shapes_and_gain():
     assert len(p.current) == 15 and {"window_xp", "sell", "purchase"} <= set(p.current.columns)
     assert len(p.xi) == 11 and len(p.bench) == 4
     assert p.xi["captain"].sum() == 1 and p.xi["vice"].sum() == 1
+    assert p.bank == my.bank  # the bank the plan was priced against
+    # a --bank override is what the plan (and the explainer's alternatives) price against
+    assert plan.plan_transfers(ppts, players["price"], my, to_gw=2, bank=my.bank + 3.0).bank == my.bank + 3.0
     assert not (p.xi["captain"] & p.xi["vice"]).any()
     assert p.bench.iloc[0]["POS"] == "GK"  # bench GK sits in slot 1
     assert p.gain >= -1e-9
