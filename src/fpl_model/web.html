@@ -298,6 +298,8 @@
       <label>entry id <input type="number" id="sb-entry" class="wide" placeholder="from your Points page URL"></label>
       <label>to GW <input type="number" id="sb-to" min="1" max="38" placeholder="next+4"></label>
       <label title="fraction of bench xP counted">bench weight <input type="number" id="sb-bw" value="0.1" step="0.05" min="0" max="1"></label>
+      <label title="points per transfer beyond your free ones">hit cost <input type="number" id="sb-hit" value="4" step="1" min="0"></label>
+      <label title="unlimited free transfers this week"><input type="checkbox" id="sb-wc" style="width:auto"> wildcard</label>
       <button class="go" id="sb-run">Load</button>
       <button class="go" id="sb-reset" hidden>Reset squad</button>
     </div>
@@ -624,8 +626,10 @@ function sbFinance(codes) {
   const out = orig.filter(c => !codes.includes(c));
   const inn = codes.filter(c => !orig.includes(c));
   const bank = SB.d.bank + out.reduce((s, c) => s + sbCost(c), 0) - inn.reduce((s, c) => s + sbP(c).price, 0);
-  const hits = Math.max(0, inn.length - SB.d.free_transfers) * 4;
-  return { out, inn, bank, hits };
+  const wildcard = $('sb-wc').checked;
+  const hitCost = parseFloat($('sb-hit').value);
+  const hits = wildcard ? 0 : Math.max(0, inn.length - SB.d.free_transfers) * (isNaN(hitCost) ? SB.d.hit_cost : hitCost);
+  return { out, inn, bank, hits, wildcard };
 }
 
 function sbWarnings(codes) {
@@ -634,7 +638,8 @@ function sbWarnings(codes) {
   if (fin.bank < -1e-9) w.push(`Over budget by £${fmt(-fin.bank)}m.`);
   const clubs = {};
   codes.forEach(c => { const t = sbP(c)?.team; if (t) clubs[t] = (clubs[t] || 0) + 1; });
-  Object.entries(clubs).filter(([, n]) => n > 3).forEach(([t, n]) => w.push(`${n} players from ${t} (max 3).`));
+  const maxClub = SB.d.max_per_club;
+  Object.entries(clubs).filter(([, n]) => n > maxClub).forEach(([t, n]) => w.push(`${n} players from ${t} (max ${maxClub}).`));
   const flagged = codes.filter(c => sbP(c) && sbP(c).status && sbP(c).status !== 'a');
   if (flagged.length) w.push('Flagged: ' + flagged.map(c => `${short(c)} (${Math.round((sbP(c).chance ?? 1) * 100)}%)`).join(', ') + '.');
   return w;
@@ -647,6 +652,7 @@ $('sb-run').onclick = async () => {
   const j = await call('/api/sandbox', { entry, to: $('sb-to').value }, $('sb-status'), $('sb-run'));
   if (!j) return;
   SB.d = j; SB.build = j.squad.map(p => p.code); SB.sel = null; SB.gwView = j.gws[0];
+  if (!$('sb-hit').value) $('sb-hit').value = j.hit_cost;
   $('sb-entry').value = j.entry;
   $('sb-out').hidden = false; $('sb-reset').hidden = false;
   const missing = j.squad.filter(p => !p.in_model).map(p => p.name);
@@ -656,7 +662,7 @@ $('sb-run').onclick = async () => {
   sbRender();
 };
 $('sb-entry').addEventListener('keydown', e => { if (e.key === 'Enter') $('sb-run').click(); });
-$('sb-bw').addEventListener('change', () => SB.d && sbRender());
+['sb-bw', 'sb-hit', 'sb-wc'].forEach(id => $(id).addEventListener('change', () => SB.d && sbRender()));
 $('sb-reset').onclick = () => { SB.build = sbOrig(); SB.sel = null; sbRender(); };
 
 function sbRender() {
@@ -666,7 +672,7 @@ function sbRender() {
   $('sb-summary').innerHTML = `
     <div class="stat"><b>${fmt(ev.total)}</b><span>window xP (this build)</span></div>
     <div class="stat"><b class="delta ${dcls(net)}">${sgn(net)}</b><span>net vs your squad${fin.hits ? ` (after -${fin.hits} hit)` : ''}</span></div>
-    <div class="stat"><b>${fin.inn.length}<small>/ ${d.free_transfers} free</small></b><span>transfers</span></div>
+    <div class="stat"><b>${fin.inn.length}<small>/ ${fin.wildcard ? 'wildcard' : d.free_transfers + ' free'}</small></b><span>transfers</span></div>
     <div class="stat"><b class="${fin.bank < 0 ? 'delta neg' : ''}">£${fmt(fin.bank)}m</b><span>bank after</span></div>
     <div class="stat"><b>${fmt(ev.per[0].total)}</b><span>GW${ev.per[0].gw} XI xP · ${ev.per[0].form} · C ${short(ev.per[0].cap)}</span></div>`;
   $('sb-warn').textContent = sbWarnings(codes).join(' ');

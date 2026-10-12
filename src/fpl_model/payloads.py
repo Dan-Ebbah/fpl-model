@@ -22,7 +22,7 @@ from .pipeline import Pipeline, build_pipeline, player_prices, resolve_codes
 from .plan import plan_transfers
 from .predict import aggregate_window, gameweek_window, has_fixture, with_fixture
 from .priors import load_priors
-from .rules import DEFAULT_FT_VALUE, DEFAULT_HORIZON
+from .rules import DEFAULT_FT_VALUE, DEFAULT_HORIZON, HIT_COST, LAST_GW, MAX_PER_CLUB
 
 # --- the per-process projection cache ---------------------------------------
 _cache: dict[bool, Pipeline] = {}  # refresh flag -> Pipeline
@@ -308,7 +308,7 @@ def _verdict_sentences(
     return v
 
 
-def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
+def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool, force: bool = False) -> dict:
     """The model's opinion on one player, written out.
 
     Deterministic prose assembled from the signals the pipeline already
@@ -316,7 +316,7 @@ def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
     and confidence caveats (injury flags, hand-set priors).
     """
 
-    ppts = cached_ppts(refresh)
+    ppts = cached_ppts(refresh, force)
     pred = aggregate_window(ppts, from_gw, to_gw)
     pred["price"] = pred["Code"].map(player_prices(refresh))
     pred = pred[pred["price"].notna()].copy()
@@ -343,9 +343,9 @@ def verdict_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
     }
 
 
-def compare_payload(a: str, b: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
+def compare_payload(a: str, b: str, from_gw: int, to_gw: int, refresh: bool, force: bool = False) -> dict:
     """Side-by-side: the model's pick vs a user-suggested alternative."""
-    va = verdict_payload(a, from_gw, to_gw, refresh)
+    va = verdict_payload(a, from_gw, to_gw, refresh, force)  # one rebuild on force, not two
     vb = verdict_payload(b, from_gw, to_gw, refresh)
 
     def by_gw(v: dict) -> dict[int, dict]:
@@ -375,7 +375,7 @@ def compare_payload(a: str, b: str, from_gw: int, to_gw: int, refresh: bool) -> 
     }
 
 
-def player_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
+def player_payload(name: str, from_gw: int, to_gw: int, refresh: bool, force: bool = False) -> dict:
     """One player's per-gameweek breakdown — the Player tab's table.
 
     Name matching is a case-insensitive substring over the PPts rows
@@ -384,7 +384,7 @@ def player_payload(name: str, from_gw: int, to_gw: int, refresh: bool) -> dict:
     browser reads, plus the backtester's track record for the player.
     """
 
-    ppts = cached_ppts(refresh)
+    ppts = cached_ppts(refresh, force)
     rows = ppts[ppts["FPL_Name"].str.contains(name, case=False, na=False)]
     names = rows["FPL_Name"].unique()
     if len(names) == 0:
@@ -583,7 +583,7 @@ def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -
     pipe = cached_pipeline(True, force)
     prices = player_prices(True, boot)
     from_gw = my.next_gw
-    to_gw = to_gw or from_gw + DEFAULT_HORIZON
+    to_gw = min(to_gw or from_gw + DEFAULT_HORIZON, LAST_GW)  # the season ends at GW38
     tables = sandbox_tables(pipe.ppts, prices, from_gw, to_gw, boot=boot, team_form=pipe.team_form)
     squad = []
     for p in my.picks:
@@ -597,6 +597,7 @@ def sandbox_payload(entry: int | None, to_gw: int | None, force: bool = False) -
         "overall_rank": my.overall_rank, "total_points": my.total_points,
         "from_gw": from_gw, "to_gw": to_gw,
         "bank": my.bank, "free_transfers": my.free_transfers,
+        "hit_cost": HIT_COST, "max_per_club": MAX_PER_CLUB,
         "notes": my.notes,
         "squad": squad, **tables,
     }

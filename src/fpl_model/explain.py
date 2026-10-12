@@ -297,8 +297,7 @@ def explain_plan(plan: TeamPlan, pipe, prices: pd.Series, ft_value: float = DEFA
     players, xp = squad_frame(ppts, prices, plan.from_gw, plan.to_gw)
     wxp = xp.sum(axis=1)
 
-    # alternatives are priced against the reconstructed bank, not any --bank override
-    budget = plan.team.bank
+    budget = plan.bank  # the same bank the plan itself was priced against (honours a --bank override)
     for transfer in plan.transfers:
         transfer["why"] = _transfer_reasons(transfer, plan, pipe, by_code, players, wxp, budget)
 
